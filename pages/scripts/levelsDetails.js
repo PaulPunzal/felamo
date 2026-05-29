@@ -75,6 +75,14 @@ $(document).ready(function () {
                                                         <i class="bi bi-card-checklist me-2"></i> Manage Assessment
                                                     </a>
                                                 </li>
+
+                                                <li>
+                                                    <a class="dropdown-item text-info fw-bold item-analysis-btn"
+                                                        href="#"
+                                                        data-aralin-id="${aralin.id}">
+                                                         <i class="bi bi-bar-chart-line-fill me-2"></i> Item Analysis
+                                                    </a>
+                                                </li>
                                                 <li>
                                                     <a class="dropdown-item text-primary" href="${videoFile ? '../backend/storage/videos/' + videoFile : '#'}" target="_blank" ${!videoFile ? 'style="pointer-events: none; opacity: 0.5;"' : ''}>
                                                         <i class="bi bi-play-circle me-2"></i> Preview Video
@@ -213,5 +221,31 @@ $(document).ready(function () {
         if(confirm("Are you sure you want to delete this lesson?")) {
             alert("Delete functionality coming soon.");
         }
+    }); 
+});
+
+// Item Analysis button — resolve assessment_id from aralin_id, then navigate
+$(document).on('click', '.item-analysis-btn', function (e) {
+    e.preventDefault();
+    const aralinId = $(this).data('aralin-id');
+ 
+    // Look up the assessment linked to this aralin
+    $.ajax({
+        type    : 'POST',
+        url     : '../backend/api/web/asssessments.php',
+        data    : { requestType: 'GetAssessment', aralin_id: aralinId },
+        dataType: 'json',
+        success : function (res) {
+            if (res.status === 'success' && res.data && res.data.length > 0) {
+                const assessmentId = res.data[0].id;
+                window.location.href = 'item_analysis.php?assessment_id=' + assessmentId;
+            } else {
+                alert('Walang assessment na nahanap para sa araling ito.\n' +
+                      'Mangyaring gumawa muna ng assessment sa "Manage Assessment".');
+            }
+        },
+        error : function () {
+            alert('Hindi ma-load ang assessment. Subukan muli.');
+        },
     });
 });
