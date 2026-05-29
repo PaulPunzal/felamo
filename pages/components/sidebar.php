@@ -46,6 +46,11 @@ if (!empty($user['profile_picture'])) {
             <a href="students.php" class="nav-link-custom <?= $current_page == 'students.php' ? 'active' : '' ?>">
                 <i class="bi bi-person-badge-fill"></i> STUDENTS
             </a>
+
+            <a href="student_progress.php" class="nav-link-custom <?= $current_page == 'student_progress.php' ? 'active' : '' ?>">
+                <i class="bi bi-bar-chart-line-fill"></i> PROGRESO NG MAG-AARAL
+            </a>
+
             <a href="notifications.php" class="nav-link-custom <?= $current_page == 'notifications.php' ? 'active' : '' ?>">
                 <i class="bi bi-bell-fill"></i> NOTIFICATIONS
             </a>
