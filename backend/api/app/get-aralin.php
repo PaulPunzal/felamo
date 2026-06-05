@@ -71,15 +71,25 @@ $result = $stmt->get_result();
 $aralin_data = [];
 
 while ($row = $result->fetch_assoc()) {
-    $done_stmt = $conn->prepare("SELECT 1 FROM student_aralin_progress WHERE aralin_id = ? AND user_id = ? LIMIT 1");
+    // FIX: Select needs_rewatch instead of just '1'
+    $done_stmt = $conn->prepare("SELECT needs_rewatch FROM student_aralin_progress WHERE aralin_id = ? AND user_id = ? LIMIT 1");
     $done_stmt->bind_param("ii", $row['id'], $user_id);
     $done_stmt->execute();
     $done_stmt->store_result();
 
-    $is_done = $done_stmt->num_rows > 0;
+    $is_done = false;
+    $needs_rewatch = false;
+
+    if ($done_stmt->num_rows > 0) {
+        $done_stmt->bind_result($nw_flag);
+        $done_stmt->fetch();
+        $is_done = true;
+        $needs_rewatch = ($nw_flag == 1);
+    }
     $done_stmt->close();
 
     $row['is_done'] = $is_done;
+    $row['needs_rewatch'] = $needs_rewatch; // Pass this to Flutter
 
     $aralin_data[] = $row;
 }
