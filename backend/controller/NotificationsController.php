@@ -12,7 +12,7 @@ class NotificationsController extends db_connect
     public function GetCreatedNotification($created_by)
     {
         $q = $this->conn->prepare("
-        SELECT n.title, n.description, s.section_name
+        SELECT n.id, n.section_id, n.title, n.description, s.section_name
         FROM `notifications` AS n
         JOIN sections AS s ON n.section_id = s.id
         WHERE n.created_by = ?");
@@ -112,6 +112,42 @@ class NotificationsController extends db_connect
             ]);
         }
 
+        $q->close();
+    }
+
+    public function GetNotificationReadStatus($notification_id, $section_id)
+    {
+        $q = $this->conn->prepare("
+            SELECT u.first_name, u.last_name, u.lrn,
+                   IF(nr.read_at IS NOT NULL, 1, 0) as is_read,
+                   nr.read_at
+            FROM student_teacher_assignments sta
+            JOIN users u ON sta.student_lrn = u.lrn
+            LEFT JOIN notification_reads nr ON nr.student_lrn = u.lrn AND nr.notification_id = ?
+            WHERE sta.section_id = ?
+            ORDER BY u.last_name ASC
+        ");
+
+        if (!$q) {
+            echo json_encode(['status' => 'error', 'message' => 'Prepare failed: ' . $this->conn->error]);
+            return;
+        }
+
+        $q->bind_param("ii", $notification_id, $section_id);
+        
+        if ($q->execute()) {
+            $result = $q->get_result();
+            $data = [];
+            while ($row = $result->fetch_assoc()) {
+                $data[] = $row;
+            }
+            echo json_encode([
+                'status' => 'success',
+                'data' => $data
+            ]);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Execute failed: ' . $q->error]);
+        }
         $q->close();
     }
 }

@@ -31,6 +31,10 @@ $(document).ready(function () {
                 <td>${notif.title}</td>
                 <td>${notif.description}</td>
                 <td>
+                  <button class="btn btn-sm btn-info text-white btn-view-status" 
+                          data-id="${notif.id}" data-section="${notif.section_id}">
+                    <i class="bi bi-eye"></i> View Status
+                  </button>
                 </td>
               </tr>
             `;
@@ -120,4 +124,40 @@ $(document).ready(function () {
       });
   });
   loadNotifs();
+
+  $(document).on("click", ".btn-view-status", function () {
+    let notif_id = $(this).data("id");
+    let section_id = $(this).data("section");
+
+    $("#statusList").html('<li class="list-group-item text-center py-4"><div class="spinner-border text-secondary" role="status"></div></li>');
+    $("#viewStatusModal").modal("show");
+
+    $.ajax({
+        type: "POST",
+        url: "../backend/api/web/notifications.php",
+        data: { requestType: "GetNotificationReadStatus", notification_id: notif_id, section_id: section_id },
+        success: function (response) {
+            let res = JSON.parse(response);
+            if (res.status === "success") {
+                let html = "";
+                if(res.data.length === 0) {
+                    html = '<li class="list-group-item text-center">No students in this section.</li>';
+                } else {
+                    res.data.forEach(student => {
+                        let badge = student.is_read == 1 
+                            ? `<span class="badge bg-success rounded-pill">Viewed</span>` 
+                            : `<span class="badge bg-danger rounded-pill">Not Viewed</span>`;
+                        
+                        html += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            ${student.last_name}, ${student.first_name}
+                            ${badge}
+                        </li>`;
+                    });
+                }
+                $("#statusList").html(html);
+            }
+        }
+    });
+  });
 });

@@ -77,33 +77,32 @@ if (!$user_data || empty($user_data['lrn'])) {
 
 $user_lrn = $user_data['lrn'];
 
-// NEW — deduplicated, capped at 50
+// Notice we bind the LRN twice: once for the JOIN, once for the WHERE clause
 $stmt = $conn->prepare("
     SELECT 
-        MAX(n.id)          AS id,
+        n.id,
         n.title,
         n.description,
-        MAX(n.created_at)  AS created_at,
-        n.section_id
+        n.created_at,
+        n.section_id,
+        IF(nr.read_at IS NOT NULL, 1, 0) AS is_read
     FROM student_teacher_assignments AS sta
-    JOIN sections     AS s ON sta.section_id = s.id
+    JOIN sections AS s ON sta.section_id = s.id
     JOIN notifications AS n ON s.id = n.section_id
+    LEFT JOIN notification_reads AS nr ON n.id = nr.notification_id AND nr.student_lrn = ?
     WHERE sta.student_lrn = ?
-    GROUP BY n.title, n.description, n.section_id
-    ORDER BY MAX(n.created_at) DESC
+    ORDER BY n.created_at DESC
     LIMIT 50
 ");
 
 if (!$stmt) {
     http_response_code(500);
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Failed to prepare notification query: ' . $conn->error
-    ]);
+    echo json_encode(['status' => 'error', 'message' => 'Failed to prepare notification query: ' . $conn->error]);
     exit;
 }
 
-$stmt->bind_param("s", $user_lrn);
+// Bind LRN twice ("ss" for two strings)
+$stmt->bind_param("ss", $user_lrn, $user_lrn);
 
 if (!$stmt->execute()) {
     http_response_code(500);

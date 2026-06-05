@@ -163,19 +163,19 @@ $sections = $sectionController->GetSectionsResult($auth_user_id);
                             <i class="bi bi-diagram-3 me-1"></i>Section
                         </label>
                         <select name="section" id="notifSection" class="form-select py-2" required>
-    <option value="" selected disabled>Select a section...</option>
-    <?php 
-    if ($sections && $sections->num_rows > 0) {
-        while ($section = $sections->fetch_assoc()): 
-    ?>
-        <option value="<?= htmlspecialchars($section['id']) ?>">
-            <?= htmlspecialchars($section['section_name']) ?>
-        </option>
-    <?php 
-        endwhile; 
-    }
-    ?>
-</select>
+                            <option value="" selected disabled>Select a section...</option>
+                            <?php 
+                            if ($sections && $sections->num_rows > 0) {
+                                while ($section = $sections->fetch_assoc()): 
+                            ?>
+                                <option value="<?= htmlspecialchars($section['id']) ?>">
+                                    <?= htmlspecialchars($section['section_name']) ?>
+                                </option>
+                            <?php 
+                                endwhile; 
+                            }
+                            ?>
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label for="notifTitle" class="form-label fw-bold text-secondary text-uppercase fs-7">
@@ -198,6 +198,23 @@ $sections = $sectionController->GetSectionsResult($auth_user_id);
                 </div>
             </div>
         </form>
+    </div>
+</div>
+
+<div class="modal fade" id="viewStatusModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header modal-header-custom">
+                <h5 class="modal-title">
+                    <i class="bi bi-eye-fill me-2"></i>Recipient Status
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <ul class="list-group list-group-flush" id="statusList">
+                    </ul>
+            </div>
+        </div>
     </div>
 </div>
 
