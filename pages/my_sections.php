@@ -141,8 +141,8 @@ include("components/header.php");
                                 <tr>
                                     <td class="fw-bold text-dark fs-6">${section.section_name}</td>
                                     <td class="text-end">
-                                        <a href="section_students.php?sectionId=${section.id}" class="btn-action-main">
-                                            <i class="bi bi-eye-fill"></i> View Students
+                                        <a href="students.php?sectionId=${section.id}" class="btn-action-main">
+                                            <i class="bi bi-people-fill"></i> View Students
                                         </a>
                                     </td>
                                 </tr>`;
