@@ -35,11 +35,10 @@ if ($requestType == "GetAralin") {
 } elseif ($requestType == "InsertAralin") {
     $post = $_POST;
     $files = $_FILES;
-    $controller->InsertAralin($post, $files);
+    $controller->InsertAralin($post);
 } elseif ($requestType == "EditAralin") {
     $post = $_POST;
-    $files = $_FILES;
-    $controller->EditAralin($post, $files);
+    $controller->EditAralin($post);
 } elseif ($requestType == "GetDoneAralin") {
     $id = $_POST['userId'];
     $controller->GetDoneAralin($id);

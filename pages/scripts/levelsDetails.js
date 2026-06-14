@@ -1,3 +1,102 @@
+// Cloudinary configuration
+const CLOUD_NAME = 'dlqj1rhuq';
+const UPLOAD_PRESET = 'felamo_videos'; 
+
+// Global flag to prevent user from leaving the page during upload
+let isUploadingToCloud = false;
+
+window.addEventListener('beforeunload', function (e) {
+    if (isUploadingToCloud) {
+        e.preventDefault();
+        e.returnValue = 'A video is currently uploading. If you leave now, the upload will be cancelled.';
+    }
+});
+
+/**
+ * Helper function to upload to Cloudinary with Chunking & Progress Tracking
+ * Bypasses the 100MB limit by splitting the file into smaller pieces.
+ */
+const uploadToCloudinaryWithProgress = (file, modalElement) => {
+    return new Promise((resolve, reject) => {
+        // We will slice the video into 20MB chunks
+        const chunkSize = 20 * 1024 * 1024; 
+        const totalChunks = Math.ceil(file.size / chunkSize);
+        
+        // Generate a unique ID for this specific file upload session
+        const uploadId = "upload_" + Date.now() + "_" + Math.random().toString(36).substring(2);
+        let currentChunk = 0;
+
+        const progressBar = modalElement.find('.upload-progress-bar');
+        const progressText = modalElement.find('.upload-status-text');
+        const progressContainer = modalElement.find('.upload-progress-container');
+
+        // Show progress UI
+        progressContainer.slideDown();
+        progressBar.css('width', '0%').text('0%').attr('aria-valuenow', 0);
+        progressText.text('Uploading Video to Cloudinary...');
+
+        // Recursive function to upload chunks one by one
+        const uploadNextChunk = () => {
+            const start = currentChunk * chunkSize;
+            const end = Math.min(start + chunkSize, file.size);
+            const chunk = file.slice(start, end);
+
+            const cloudFormData = new FormData();
+            cloudFormData.append('file', chunk);
+            cloudFormData.append('upload_preset', UPLOAD_PRESET);
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`);
+            
+            // Cloudinary headers required for chunked uploads
+            xhr.setRequestHeader('X-Unique-Upload-Id', uploadId);
+            xhr.setRequestHeader('Content-Range', `bytes ${start}-${end - 1}/${file.size}`);
+
+            // Track Progress
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    const chunkLoaded = e.loaded;
+                    const totalLoaded = start + chunkLoaded;
+                    const percent = Math.round((totalLoaded / file.size) * 100);
+                    
+                    progressBar.css('width', percent + '%').text(percent + '%').attr('aria-valuenow', percent);
+                    
+                    if (percent === 100) {
+                        progressText.text('Processing video... please wait.');
+                        progressBar.removeClass('progress-bar-animated');
+                    }
+                }
+            };
+
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    currentChunk++;
+                    
+                    if (currentChunk < totalChunks) {
+                        // If there are more chunks, upload the next one
+                        uploadNextChunk();
+                    } else {
+                        // All chunks are done! Cloudinary returns the final URL.
+                        progressText.text('Upload Complete! Saving to database...');
+                        progressBar.removeClass('bg-primary').addClass('bg-success');
+                        resolve(JSON.parse(xhr.responseText));
+                    }
+                } else {
+                    reject(new Error(JSON.parse(xhr.responseText).error?.message || 'Upload failed'));
+                }
+            };
+
+            xhr.onerror = () => reject(new Error('Network error during upload'));
+            
+            xhr.send(cloudFormData);
+        };
+
+        // Start the upload process
+        uploadNextChunk(); 
+    });
+};
+
+
 $(document).ready(function () {
     const level_id = $("#hidden_level_id").val();
 
@@ -26,15 +125,16 @@ $(document).ready(function () {
                             </tr>`;
                     } else {
                         aralins.forEach((aralin, index) => {
-                            // Calculate Aralin Number (index + 1)
                             let lessonNum = index + 1;
-                            
-                            // Truncate summary if too long
                             let summary = aralin.summary || "";
                             if (summary.length > 100) summary = summary.substring(0, 100) + "...";
 
-                            // Safety Check: Make sure filename is not null
                             let videoFile = aralin.attachment_filename ? aralin.attachment_filename : "";
+                            
+                            let previewUrl = "#";
+                            if (videoFile) {
+                                previewUrl = videoFile.startsWith('http') ? videoFile : '../backend/storage/videos/' + videoFile;
+                            }
 
                             html += `
                                 <tr>
@@ -69,22 +169,19 @@ $(document).ready(function () {
                                                     <i class="bi bi-pencil-square me-2"></i> Edit
                                                     </a>
                                                 </li>
-                                                
                                                 <li>
                                                     <a class="dropdown-item text-success fw-bold" href="create_assessment.php?aralin=${aralin.id}">
                                                         <i class="bi bi-card-checklist me-2"></i> Manage Assessment
                                                     </a>
                                                 </li>
-
                                                 <li>
                                                     <a class="dropdown-item text-info fw-bold item-analysis-btn"
-                                                        href="#"
-                                                        data-aralin-id="${aralin.id}">
+                                                        href="#" data-aralin-id="${aralin.id}">
                                                          <i class="bi bi-bar-chart-line-fill me-2"></i> Item Analysis
                                                     </a>
                                                 </li>
                                                 <li>
-                                                    <a class="dropdown-item text-primary" href="${videoFile ? '../backend/storage/videos/' + videoFile : '#'}" target="_blank" ${!videoFile ? 'style="pointer-events: none; opacity: 0.5;"' : ''}>
+                                                    <a class="dropdown-item text-primary" href="${previewUrl}" target="_blank" ${!videoFile ? 'style="pointer-events: none; opacity: 0.5;"' : ''}>
                                                         <i class="bi bi-play-circle me-2"></i> Preview Video
                                                     </a>
                                                 </li>
@@ -115,49 +212,84 @@ $(document).ready(function () {
 
     loadAralins();
 
-    // --- CREATE ARALIN ---
-    $("#insert-aralin-form").submit(function (e) {
+    // --- RESET UI HELPER ---
+    const resetProgressUI = (modalElement) => {
+        modalElement.find('.upload-progress-container').hide();
+        modalElement.find('.upload-progress-bar')
+            .removeClass('bg-success').addClass('bg-primary progress-bar-animated')
+            .css('width', '0%').text('0%');
+    };
+
+    // --- CREATE ARALIN (WITH CLOUDINARY) ---
+    $("#insert-aralin-form").submit(async function (e) {
         e.preventDefault();
         
-        let submitBtn = $(this).find('button[type="submit"]');
+        let form = $(this);
+        let modalElement = $("#insertAralinModal");
+        let submitBtn = form.find('button[type="submit"]');
         let originalText = submitBtn.text();
-        submitBtn.text("Saving...").prop("disabled", true);
+        
+        let fileInput = form.find('input[name="attachment"]')[0];
+        let file = fileInput.files[0];
+        
+        if (!file) {
+            alert("Please select a video file first.");
+            return;
+        }
 
-        let formData = new FormData(this);
+        submitBtn.prop("disabled", true);
+        isUploadingToCloud = true; // Lock the page
 
-        $.ajax({
-            type: "POST",
-            url: "../backend/api/web/aralin.php",
-            data: formData,
-            contentType: false,
-            processData: false,
-            success: function (response) {
-                submitBtn.text(originalText).prop("disabled", false);
-                try {
-                    let res = JSON.parse(response);
-                    if (res.status === "success") {
-                        alert("Lesson successfully saved!");
-                        $("#insertAralinModal").modal("hide");
-                        $("#insert-aralin-form")[0].reset();
-                        loadAralins();
-                    } else {
-                        alert("Failed: " + res.message);
+        try {
+            // 1. Upload to Cloudinary with Progress
+            const cloudData = await uploadToCloudinaryWithProgress(file, modalElement);
+            const secureVideoUrl = cloudData.secure_url;
+
+            // 2. Send Data + Video URL to PHP Backend
+            submitBtn.text("Saving Lesson Data...");
+            let backendFormData = new FormData(this);
+            
+            backendFormData.delete('attachment'); 
+            backendFormData.append('video_url', secureVideoUrl); 
+
+            $.ajax({
+                type: "POST",
+                url: "../backend/api/web/aralin.php",
+                data: backendFormData,
+                contentType: false,
+                processData: false,
+                success: function (response) {
+                    isUploadingToCloud = false; // Unlock page
+                    submitBtn.text(originalText).prop("disabled", false);
+                    try {
+                        let res = JSON.parse(response);
+                        if (res.status === "success") {
+                            alert("Lesson successfully saved!");
+                            modalElement.modal("hide");
+                            form[0].reset();
+                            resetProgressUI(modalElement);
+                            loadAralins();
+                        } else {
+                            alert("Failed: " + res.message);
+                        }
+                    } catch (err) {
+                        alert("Server returned invalid data.");
                     }
-                } catch (err) {
-                    console.error("Raw server response:", response);
-                    alert("Server returned invalid data. Press F12 and check the Console tab for the exact PHP error.");
-                }
-            },
-            error: function (xhr, status, error) {
-                submitBtn.text(originalText).prop("disabled", false);
-                try {
-                    let res = JSON.parse(xhr.responseText);
-                    alert("Error: " + res.message);
-                } catch(e) {
-                    alert("Server Error (" + xhr.status + "): " + xhr.responseText);
-                }
-            },
-        });
+                },
+                error: function () {
+                    isUploadingToCloud = false;
+                    submitBtn.text(originalText).prop("disabled", false);
+                    alert("Server Error. Please try again.");
+                },
+            });
+
+        } catch (error) {
+            isUploadingToCloud = false;
+            console.error("Error:", error);
+            alert('Upload failed: ' + error.message);
+            submitBtn.text(originalText).prop("disabled", false);
+            resetProgressUI(modalElement);
+        }
     });
 
     // --- OPEN EDIT MODAL ---
@@ -175,44 +307,79 @@ $(document).ready(function () {
         $("#edit-aralin-summary").val(summary);
         $("#edit-aralin-details").val(details);
 
-        // EXTRA SAFETY CHECK: Prevent the string "undefined" or "null" from bypassing logic
         if (attachment && attachment !== "undefined" && attachment !== "null" && attachment.trim() !== "") {
-            $("#current-video-link").attr("href", "../backend/storage/videos/" + attachment);
+            let previewUrl = attachment.startsWith('http') ? attachment : "../backend/storage/videos/" + attachment;
+            $("#current-video-link").attr("href", previewUrl);
             $("#current-video-link").show();
-            $("#current-video-text").text("Current video: " + attachment);
+            $("#current-video-text").text("Video is currently attached");
         } else {
             $("#current-video-link").hide();
             $("#current-video-text").text("No video attached.");
         }
 
+        resetProgressUI($("#editAralinModal"));
         $("#editAralinModal").modal("show");
     });
 
-    // --- SUBMIT EDIT FORM ---
-    $("#edit-aralin-form").submit(function (e) {
+    // --- SUBMIT EDIT FORM (WITH CLOUDINARY) ---
+    $("#edit-aralin-form").submit(async function (e) {
         e.preventDefault();
-        let formData = new FormData(this);
+        
+        let form = $(this);
+        let modalElement = $("#editAralinModal");
+        let submitBtn = form.find('button[type="submit"]');
+        let originalText = submitBtn.text();
+        submitBtn.prop("disabled", true);
 
-        $.ajax({
-            type: "POST",
-            url: "../backend/api/web/aralin.php",
-            data: formData,
-            contentType: false,
-            processData: false,
-            success: function (response) {
-                let res = JSON.parse(response);
-                if (res.status === "success") {
-                    alert(res.message);
-                    $("#editAralinModal").modal("hide");
-                    loadAralins();
-                } else {
-                    alert(res.message);
-                }
-            },
-            error: function () {
-                alert("An error occurred.");
-            },
-        });
+        let backendFormData = new FormData(this);
+        let fileInput = form.find('input[name="attachment"]')[0];
+        let file = fileInput.files[0];
+
+        try {
+            // Only upload to Cloudinary if the admin selected a NEW video
+            if (file) {
+                isUploadingToCloud = true; // Lock page
+                const cloudData = await uploadToCloudinaryWithProgress(file, modalElement);
+                backendFormData.delete('attachment'); 
+                backendFormData.append('video_url', cloudData.secure_url);
+            } else {
+                backendFormData.delete('attachment'); 
+            }
+
+            submitBtn.text("Updating Data...");
+            $.ajax({
+                type: "POST",
+                url: "../backend/api/web/aralin.php",
+                data: backendFormData,
+                contentType: false,
+                processData: false,
+                success: function (response) {
+                    isUploadingToCloud = false; // Unlock
+                    submitBtn.text(originalText).prop("disabled", false);
+                    let res = JSON.parse(response);
+                    if (res.status === "success") {
+                        alert(res.message);
+                        modalElement.modal("hide");
+                        form[0].reset();
+                        resetProgressUI(modalElement);
+                        loadAralins();
+                    } else {
+                        alert(res.message);
+                    }
+                },
+                error: function () {
+                    isUploadingToCloud = false;
+                    submitBtn.text(originalText).prop("disabled", false);
+                    alert("An error occurred updating the database.");
+                },
+            });
+        } catch (error) {
+            isUploadingToCloud = false;
+            console.error("Error:", error);
+            alert('An error occurred: ' + error.message);
+            submitBtn.text(originalText).prop("disabled", false);
+            resetProgressUI(modalElement);
+        }
     });
 
     // --- DELETE HANDLER ---
@@ -224,12 +391,11 @@ $(document).ready(function () {
     }); 
 });
 
-// Item Analysis button — resolve assessment_id from aralin_id, then navigate
+// Item Analysis button
 $(document).on('click', '.item-analysis-btn', function (e) {
     e.preventDefault();
     const aralinId = $(this).data('aralin-id');
  
-    // Look up the assessment linked to this aralin
     $.ajax({
         type    : 'POST',
         url     : '../backend/api/web/asssessments.php',
@@ -240,8 +406,7 @@ $(document).on('click', '.item-analysis-btn', function (e) {
                 const assessmentId = res.data[0].id;
                 window.location.href = 'item_analysis.php?assessment_id=' + assessmentId;
             } else {
-                alert('Walang assessment na nahanap para sa araling ito.\n' +
-                      'Mangyaring gumawa muna ng assessment sa "Manage Assessment".');
+                alert('Walang assessment na nahanap para sa araling ito.\\nMangyaring gumawa muna ng assessment sa "Manage Assessment".');
             }
         },
         error : function () {

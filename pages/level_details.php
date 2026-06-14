@@ -307,6 +307,17 @@ if ($level_id) {
                         <label class="form-label fw-bold">Upload Video</label>
                         <input type="file" class="form-control" name="attachment" accept="video/*" required>
                     </div>
+                    <div class="upload-progress-container mt-3" style="display: none;">
+                        <label class="form-label fw-bold text-primary mb-1 upload-status-text">Uploading Video...</label>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary upload-progress-bar" 
+                                role="progressbar" 
+                                style="width: 0%;" 
+                                aria-valuenow="0" 
+                                aria-valuemin="0" 
+                                aria-valuemax="100">0%</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
@@ -354,6 +365,17 @@ if ($level_id) {
                     <div class="mb-3">
                         <label class="form-label fw-bold">Replace Video (Optional)</label>
                         <input type="file" class="form-control" name="attachment" accept="video/*">
+                    </div>
+                                        <div class="upload-progress-container mt-3" style="display: none;">
+                        <label class="form-label fw-bold text-primary mb-1 upload-status-text">Uploading Video...</label>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary upload-progress-bar" 
+                                role="progressbar" 
+                                style="width: 0%;" 
+                                aria-valuenow="0" 
+                                aria-valuemin="0" 
+                                aria-valuemax="100">0%</div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
