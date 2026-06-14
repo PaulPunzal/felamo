@@ -161,8 +161,8 @@ $log_stmt->execute();
 $log_stmt->close();
 
 // ── 8. Pass / Fail decision ───────────────────────────────────────────────────
-// 80% threshold — computed against the actual item count for this aralin
-$pass_threshold = 0.80;
+// 50% threshold — computed against the actual item count for this aralin
+$pass_threshold = 0.50;
 $passed         = ($total_items > 0) && (($score / $total_items) >= $pass_threshold);
 
 if ($passed) {
@@ -261,6 +261,6 @@ if ($passed) {
         'percentage'   => $percentage,
         'attempts'     => $attempt_cnt,
         'is_completed' => false,
-        'message'      => 'Hindi nakamit ang 80%. Pakitingnan muli ang aralin bago muling sumubok.',
+        'message'      => 'Hindi nakamit ang 50%. Pakitingnan muli ang aralin bago muling sumubok.',
     ]);
 }
