@@ -1,14 +1,11 @@
 <?php
-define("db_host", "localhost");
-define("db_user", "devuser");
-define("db_pass", "DevPass123!");
-define("db_name", "felamo");
+require_once __DIR__ . '/../config/env.php';
 
+define("db_host", app_env('DB_HOST', 'localhost'));
+define("db_user", app_env('DB_USER', 'devuser'));
+define("db_pass", app_env('DB_PASS'));
+define("db_name", app_env('DB_NAME', 'felamo'));
 
-// define("db_host", "localhost");
-// define("db_user", "u240756803_felamov3");
-// define("db_pass", "hehcE6-fotcab-viskaj");
-// define("db_name", "u240756803_felamov3");
 
 class db_connect
 {

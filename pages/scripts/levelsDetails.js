@@ -109,14 +109,12 @@ const uploadToR2WithProgress = (file, modalElement) => {
 
                     xhr.onload = () => {
                         if (xhr.status >= 200 && xhr.status < 300) {
-                            const etag = xhr.getResponseHeader('ETag');
-
+                            const etag = xhr.getResponseHeader('ETag');                        
                             if (!etag) {
                                 abortUpload(new Error(
                                     "Upload succeeded but no ETag was returned. " +
                                     "Make sure the R2 bucket CORS policy includes 'ETag' in ExposeHeaders."
                                 ));
-                                return;
                             }
 
                             uploadedParts.push({ PartNumber: currentPart, ETag: etag });
@@ -167,8 +165,13 @@ const uploadToR2WithProgress = (file, modalElement) => {
             // Start the upload process
             uploadNextPart();
 
-        }).fail(() => {
-            reject(new Error("Network error while initiating the upload."));
+        }).fail((xhr) => {
+            let msg = "Network error while initiating the upload.";
+            try {
+                const res = JSON.parse(xhr.responseText);
+                if (res && res.message) msg = res.message;
+            } catch (e) {}
+            reject(new Error(msg));
         });
     });
 };

@@ -28,7 +28,7 @@ class R2UploadService
         $config = require __DIR__ . '/../config/r2.php';
 
         foreach (['access_key_id', 'secret_access_key', 'endpoint', 'bucket', 'public_base_url'] as $required) {
-            if (empty($config[$required]) || str_starts_with($config[$required], 'YOUR_')) {
+            if (empty($config[$required]) || str_contains($config[$required], 'YOUR_')) {
                 throw new \RuntimeException(
                     "R2 configuration is incomplete. Please set '$required' in backend/config/r2.php " .
                     "or via environment variables before uploading videos."

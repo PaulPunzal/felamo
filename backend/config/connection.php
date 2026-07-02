@@ -1,14 +1,10 @@
 <?php
-// $servername = "localhost";
-// $username   = "u240756803_felamov3";     
-// $password   = "hehcE6-fotcab-viskaj";          
-// $dbname     = "u240756803_felamov3";
+require_once __DIR__ . '/env.php';
 
-$servername = "localhost";
-// Use the local dev credentials matching backend/db/db.php
-$username   = "devuser";     
-$password   = "DevPass123!";          
-$dbname     = "felamo";
+$servername = app_env('DB_HOST', 'localhost');
+$username   = app_env('DB_USER', 'devuser');
+$password   = app_env('DB_PASS', 'DevPass123!');
+$dbname     = app_env('DB_NAME', 'felamo');
 
 // Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);
