@@ -1,0 +1,12 @@
+{
+    "name": "felamo/backend",
+    "description": "Felamo backend dependencies (Cloudflare R2 video storage via AWS S3 SDK)",
+    "require": {
+        "php": ">=8.0",
+        "aws/aws-sdk-php": "^3.300",
+        "vlucas/phpdotenv": "^5.6"
+    },
+    "config": {
+        "optimize-autoloader": true
+    }
+}

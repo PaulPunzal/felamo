@@ -1,6 +1,9 @@
-// Cloudinary configuration
-const CLOUD_NAME = 'dlqj1rhuq';
-const UPLOAD_PRESET = 'felamo_videos'; 
+// R2 (Cloudflare) video upload configuration
+// Videos are uploaded directly from the browser to R2 using presigned
+// multipart upload URLs brokered by backend/api/web/r2_video_upload.php.
+// The video bytes never pass through our PHP server.
+const R2_UPLOAD_ENDPOINT = "../backend/api/web/r2_video_upload.php";
+const R2_PART_SIZE = 20 * 1024 * 1024; // 20MB per part (S3/R2 minimum is 5MB, except the final part)
 
 // Global flag to prevent user from leaving the page during upload
 let isUploadingToCloud = false;
@@ -13,19 +16,13 @@ window.addEventListener('beforeunload', function (e) {
 });
 
 /**
- * Helper function to upload to Cloudinary with Chunking & Progress Tracking
- * Bypasses the 100MB limit by splitting the file into smaller pieces.
+ * Uploads a video file directly to Cloudflare R2 using the S3 multipart
+ * upload API, with progress tracking, and resolves with the same shape
+ * the old Cloudinary helper used ({ secure_url }) so the rest of the
+ * form-submit logic doesn't need to change.
  */
-const uploadToCloudinaryWithProgress = (file, modalElement) => {
+const uploadToR2WithProgress = (file, modalElement) => {
     return new Promise((resolve, reject) => {
-        // We will slice the video into 20MB chunks
-        const chunkSize = 20 * 1024 * 1024; 
-        const totalChunks = Math.ceil(file.size / chunkSize);
-        
-        // Generate a unique ID for this specific file upload session
-        const uploadId = "upload_" + Date.now() + "_" + Math.random().toString(36).substring(2);
-        let currentChunk = 0;
-
         const progressBar = modalElement.find('.upload-progress-bar');
         const progressText = modalElement.find('.upload-status-text');
         const progressContainer = modalElement.find('.upload-progress-container');
@@ -33,66 +30,146 @@ const uploadToCloudinaryWithProgress = (file, modalElement) => {
         // Show progress UI
         progressContainer.slideDown();
         progressBar.css('width', '0%').text('0%').attr('aria-valuenow', 0);
-        progressText.text('Uploading Video to Cloudinary...');
+        progressText.text('Preparing upload...');
 
-        // Recursive function to upload chunks one by one
-        const uploadNextChunk = () => {
-            const start = currentChunk * chunkSize;
-            const end = Math.min(start + chunkSize, file.size);
-            const chunk = file.slice(start, end);
+        // --- Step 1: Ask our backend to open a multipart upload session on R2 ---
+        $.ajax({
+            type: "POST",
+            url: R2_UPLOAD_ENDPOINT,
+            data: {
+                requestType: "InitiateMultipartUpload",
+                filename: file.name,
+                content_type: file.type || "video/mp4",
+            },
+            dataType: "json",
+        }).done(function (initRes) {
+            if (!initRes || initRes.status !== "success") {
+                reject(new Error((initRes && initRes.message) || "Failed to initiate upload."));
+                return;
+            }
 
-            const cloudFormData = new FormData();
-            cloudFormData.append('file', chunk);
-            cloudFormData.append('upload_preset', UPLOAD_PRESET);
+            const key = initRes.key;
+            const uploadId = initRes.upload_id;
+            const totalChunks = Math.max(1, Math.ceil(file.size / R2_PART_SIZE));
+            const uploadedParts = [];
+            let currentPart = 1;
+            let bytesUploaded = 0;
 
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`);
-            
-            // Cloudinary headers required for chunked uploads
-            xhr.setRequestHeader('X-Unique-Upload-Id', uploadId);
-            xhr.setRequestHeader('Content-Range', `bytes ${start}-${end - 1}/${file.size}`);
+            progressText.text('Uploading Video to Cloudflare R2...');
 
-            // Track Progress
-            xhr.upload.onprogress = (e) => {
-                if (e.lengthComputable) {
-                    const chunkLoaded = e.loaded;
-                    const totalLoaded = start + chunkLoaded;
-                    const percent = Math.round((totalLoaded / file.size) * 100);
-                    
-                    progressBar.css('width', percent + '%').text(percent + '%').attr('aria-valuenow', percent);
-                    
-                    if (percent === 100) {
-                        progressText.text('Processing video... please wait.');
-                        progressBar.removeClass('progress-bar-animated');
-                    }
-                }
+            const abortUpload = (err) => {
+                // Best-effort cleanup of the half-finished session; ignore failures
+                $.post(R2_UPLOAD_ENDPOINT, {
+                    requestType: "AbortMultipartUpload",
+                    key: key,
+                    upload_id: uploadId,
+                });
+                reject(err);
             };
 
-            xhr.onload = () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    currentChunk++;
-                    
-                    if (currentChunk < totalChunks) {
-                        // If there are more chunks, upload the next one
-                        uploadNextChunk();
-                    } else {
-                        // All chunks are done! Cloudinary returns the final URL.
-                        progressText.text('Upload Complete! Saving to database...');
-                        progressBar.removeClass('bg-primary').addClass('bg-success');
-                        resolve(JSON.parse(xhr.responseText));
+            // Recursive function to upload parts one by one
+            const uploadNextPart = () => {
+                const start = (currentPart - 1) * R2_PART_SIZE;
+                const end = Math.min(start + R2_PART_SIZE, file.size);
+                const chunk = file.slice(start, end);
+
+                // --- Step 2: Get a presigned PUT URL for this specific part ---
+                $.ajax({
+                    type: "POST",
+                    url: R2_UPLOAD_ENDPOINT,
+                    data: {
+                        requestType: "GetUploadPartUrl",
+                        key: key,
+                        upload_id: uploadId,
+                        part_number: currentPart,
+                    },
+                    dataType: "json",
+                }).done(function (partRes) {
+                    if (!partRes || partRes.status !== "success") {
+                        abortUpload(new Error((partRes && partRes.message) || "Failed to get upload URL for part " + currentPart));
+                        return;
                     }
-                } else {
-                    reject(new Error(JSON.parse(xhr.responseText).error?.message || 'Upload failed'));
-                }
+
+                    // --- Step 3: PUT the chunk directly to R2 (bypasses our server) ---
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('PUT', partRes.url);
+
+                    xhr.upload.onprogress = (e) => {
+                        if (e.lengthComputable) {
+                            const totalLoaded = bytesUploaded + e.loaded;
+                            const percent = Math.round((totalLoaded / file.size) * 100);
+
+                            progressBar.css('width', percent + '%').text(percent + '%').attr('aria-valuenow', percent);
+
+                            if (percent >= 100) {
+                                progressText.text('Processing video... please wait.');
+                            }
+                        }
+                    };
+
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            const etag = xhr.getResponseHeader('ETag');
+
+                            if (!etag) {
+                                abortUpload(new Error(
+                                    "Upload succeeded but no ETag was returned. " +
+                                    "Make sure the R2 bucket CORS policy includes 'ETag' in ExposeHeaders."
+                                ));
+                                return;
+                            }
+
+                            uploadedParts.push({ PartNumber: currentPart, ETag: etag });
+                            bytesUploaded += chunk.size;
+
+                            if (currentPart < totalChunks) {
+                                currentPart++;
+                                uploadNextPart();
+                            } else {
+                                // --- Step 4: All parts uploaded — finalize on R2 ---
+                                progressText.text('Finalizing upload...');
+
+                                $.ajax({
+                                    type: "POST",
+                                    url: R2_UPLOAD_ENDPOINT,
+                                    data: {
+                                        requestType: "CompleteMultipartUpload",
+                                        key: key,
+                                        upload_id: uploadId,
+                                        parts: JSON.stringify(uploadedParts),
+                                    },
+                                    dataType: "json",
+                                }).done(function (completeRes) {
+                                    if (completeRes && completeRes.status === "success") {
+                                        progressText.text('Upload Complete! Saving to database...');
+                                        progressBar.removeClass('bg-primary').addClass('bg-success');
+                                        resolve({ secure_url: completeRes.url });
+                                    } else {
+                                        reject(new Error((completeRes && completeRes.message) || "Failed to finalize upload."));
+                                    }
+                                }).fail(() => {
+                                    reject(new Error("Network error while finalizing the upload."));
+                                });
+                            }
+                        } else {
+                            abortUpload(new Error("Upload failed for part " + currentPart + " (HTTP " + xhr.status + ")"));
+                        }
+                    };
+
+                    xhr.onerror = () => abortUpload(new Error("Network error while uploading part " + currentPart));
+
+                    xhr.send(chunk);
+                }).fail(() => {
+                    abortUpload(new Error("Network error while requesting an upload URL for part " + currentPart));
+                });
             };
 
-            xhr.onerror = () => reject(new Error('Network error during upload'));
-            
-            xhr.send(cloudFormData);
-        };
+            // Start the upload process
+            uploadNextPart();
 
-        // Start the upload process
-        uploadNextChunk(); 
+        }).fail(() => {
+            reject(new Error("Network error while initiating the upload."));
+        });
     });
 };
 
@@ -130,7 +207,7 @@ $(document).ready(function () {
                             if (summary.length > 100) summary = summary.substring(0, 100) + "...";
 
                             let videoFile = aralin.attachment_filename ? aralin.attachment_filename : "";
-                            
+
                             let previewUrl = "#";
                             if (videoFile) {
                                 previewUrl = videoFile.startsWith('http') ? videoFile : '../backend/storage/videos/' + videoFile;
@@ -220,7 +297,7 @@ $(document).ready(function () {
             .css('width', '0%').text('0%');
     };
 
-    // --- CREATE ARALIN (WITH CLOUDINARY) ---
+    // --- CREATE ARALIN (WITH CLOUDFLARE R2) ---
     $("#insert-aralin-form").submit(async function (e) {
         e.preventDefault();
         
@@ -241,9 +318,9 @@ $(document).ready(function () {
         isUploadingToCloud = true; // Lock the page
 
         try {
-            // 1. Upload to Cloudinary with Progress
-            const cloudData = await uploadToCloudinaryWithProgress(file, modalElement);
-            const secureVideoUrl = cloudData.secure_url;
+            // 1. Upload to Cloudflare R2 with Progress
+            const uploadData = await uploadToR2WithProgress(file, modalElement);
+            const secureVideoUrl = uploadData.secure_url;
 
             // 2. Send Data + Video URL to PHP Backend
             submitBtn.text("Saving Lesson Data...");
@@ -321,7 +398,7 @@ $(document).ready(function () {
         $("#editAralinModal").modal("show");
     });
 
-    // --- SUBMIT EDIT FORM (WITH CLOUDINARY) ---
+    // --- SUBMIT EDIT FORM (WITH CLOUDFLARE R2) ---
     $("#edit-aralin-form").submit(async function (e) {
         e.preventDefault();
         
@@ -336,12 +413,12 @@ $(document).ready(function () {
         let file = fileInput.files[0];
 
         try {
-            // Only upload to Cloudinary if the admin selected a NEW video
+            // Only upload to R2 if the admin selected a NEW video
             if (file) {
                 isUploadingToCloud = true; // Lock page
-                const cloudData = await uploadToCloudinaryWithProgress(file, modalElement);
+                const uploadData = await uploadToR2WithProgress(file, modalElement);
                 backendFormData.delete('attachment'); 
-                backendFormData.append('video_url', cloudData.secure_url);
+                backendFormData.append('video_url', uploadData.secure_url);
             } else {
                 backendFormData.delete('attachment'); 
             }
