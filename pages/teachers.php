@@ -120,6 +120,38 @@ $isSuperAdmin = $user['role'] === 'super_admin';
     </main>
 </div>
 
+<div class="modal fade" id="importTeacherModal" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Preview & Validate Teacher Import</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="file" id="teacherCsvFile" accept=".csv" class="form-control mb-3">
+        <div class="table-responsive">
+          <table class="table table-bordered table-striped" id="teacherPreviewTable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Password</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-success" id="btnConfirmTeacherImport" disabled>Import Valid Teachers</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <?php include("components/footer-scripts.php"); ?>
 
 <script src="scripts/teachers.js"></script>

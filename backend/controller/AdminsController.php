@@ -217,4 +217,72 @@ class AdminsController extends db_connect
             'errors' => $errors
         ]);
     }
+
+    public function ValidateTeacherImport($users)
+    {
+        $validatedData = [];
+        
+        foreach ($users as $user) {
+            // Match headers from import-teacher-template.csv
+            $email = isset($user['Email']) ? $user['Email'] : '';
+            $name = isset($user['Name']) ? $user['Name'] : '';
+
+            $exists = false;
+            
+            // Check if email is already in web_users
+            if (!empty($email)) {
+                $checkStmt = $this->conn->prepare("SELECT id FROM `web_users` WHERE email = ?");
+                $checkStmt->bind_param("s", $email);
+                $checkStmt->execute();
+                $checkStmt->store_result();
+                
+                if ($checkStmt->num_rows > 0) {
+                    $exists = true;
+                }
+                $checkStmt->close();
+            }
+
+            $user['exists'] = $exists;
+            $user['invalid'] = empty($email) || empty($name);
+            
+            $validatedData[] = $user;
+        }
+
+        echo json_encode(['status' => 'success', 'data' => $validatedData]);
+    }
+
+    public function ValidateStudentImport($users)
+    {
+        $validatedData = [];
+        
+        foreach ($users as $user) {
+            // Match headers from TEST-STUDENT-IMPORT(2).csv
+            $lrn = isset($user['lrn']) ? $user['lrn'] : '';
+            $email = isset($user['email']) ? $user['email'] : '';
+            $firstName = isset($user['first_name']) ? $user['first_name'] : '';
+
+            $exists = false;
+            
+            if (!empty($lrn) || !empty($email)) {
+                // NOTE: Assuming LRN is stored in the 'username' column for students. 
+                // Change 'username = ?' to 'lrn = ?' if you have a specific LRN column.
+                $checkStmt = $this->conn->prepare("SELECT id FROM `web_users` WHERE email = ? OR username = ?");
+                $checkStmt->bind_param("ss", $email, $lrn);
+                $checkStmt->execute();
+                $checkStmt->store_result();
+                
+                if ($checkStmt->num_rows > 0) {
+                    $exists = true;
+                }
+                $checkStmt->close();
+            }
+
+            $user['exists'] = $exists;
+            $user['invalid'] = empty($lrn) || empty($firstName);
+            
+            $validatedData[] = $user;
+        }
+
+        echo json_encode(['status' => 'success', 'data' => $validatedData]);
+    }
 }

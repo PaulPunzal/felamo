@@ -127,6 +127,38 @@ try {
     </main>
 </div>
 
+<div class="modal fade" id="importStudentModal" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Preview & Validate Student Import</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="file" id="studentCsvFile" accept=".csv" class="form-control mb-3">
+        <div class="table-responsive">
+          <table class="table table-bordered table-striped" id="studentPreviewTable">
+            <thead>
+              <tr>
+                <th>LRN</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-success" id="btnConfirmStudentImport" disabled>Import Valid Students</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <?php include("components/footer-scripts.php"); ?>
 
 <script>

@@ -28,6 +28,14 @@ if ($requestType == "GetTeachers") {
     $accs = json_decode($_POST['teacherAccs'], true);
 
     $controller->ImportTeacherAccounts($accs);
+} elseif ($requestType == "ValidateTeacherImport") {
+    $users = isset($_POST['users']) ? $_POST['users'] : [];
+    $controller->ValidateTeacherImport($users);
+    
+} elseif ($requestType == "ValidateStudentImport") {
+    $users = isset($_POST['users']) ? $_POST['users'] : [];
+    $controller->ValidateStudentImport($users);
+
 } else {
     http_response_code(400);
     echo "Invalid or missing requestType.";

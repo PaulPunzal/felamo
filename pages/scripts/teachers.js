@@ -216,6 +216,96 @@ $(document).ready(function () {
     reader.readAsText(file);
   });
 
+  // Triggered when user selects a CSV file in the modal
+  $('#teacherCsvFile').on('change', function(e) {
+      let file = e.target.files[0];
+      if (!file) return;
+
+      Papa.parse(file, {
+          header: true,
+          skipEmptyLines: true,
+          complete: function(results) {
+              let data = results.data;
+              let tbody = $('#teacherPreviewTable tbody');
+              tbody.html('<tr><td colspan="4" class="text-center">Validating with Database...</td></tr>');
+              
+              // Send the parsed CSV to the backend to check if emails already exist
+              $.ajax({
+                  url: '../backend/api/web/admin.php', // Adjust if your endpoint is UsersController.php
+                  type: 'POST',
+                  data: {
+                      requestType: 'ValidateTeacherImport',
+                      users: data
+                  },
+                  success: function(response) {
+                      let res = JSON.parse(response);
+                      let canImport = false;
+                      tbody.empty();
+                      
+                      res.data.forEach(row => {
+                          let statusHtml = '';
+                          
+                          // Determine the visual badge status
+                          if (row.exists) {
+                              statusHtml = '<span class="badge bg-danger">Already Exists (Email)</span>';
+                          } else if(row.invalid) {
+                              statusHtml = '<span class="badge bg-warning text-dark">Missing Data</span>';
+                          } else {
+                              statusHtml = '<span class="badge bg-success">Ready to Import</span>';
+                              canImport = true; 
+                          }
+
+                          // Inject row into the visual table
+                          tbody.append(`
+                              <tr>
+                                  <td>${row.Name || '-'}</td>
+                                  <td>${row.Email || '-'}</td>
+                                  <td>${row.Password ? '***' : '-'}</td>
+                                  <td>${statusHtml}</td>
+                              </tr>
+                          `);
+                      });
+
+                      // Save the valid rows in memory so we only import those when they click the button
+                      let validTeachers = res.data.filter(r => !r.exists && !r.invalid);
+                      $('#btnConfirmTeacherImport').data('valid_users', validTeachers);
+                      
+                      // Enable the import button only if there's at least 1 valid row
+                      $('#btnConfirmTeacherImport').prop('disabled', !canImport);
+                  },
+                  error: function() {
+                      showAlert('danger', 'Error validating CSV data.');
+                  }
+              });
+          }
+      });
+  });
+
+  // Final button click to actually insert into the database
+  $('#btnConfirmTeacherImport').on('click', function() {
+      let validUsers = $(this).data('valid_users');
+      if (!validUsers || validUsers.length === 0) return;
+
+      $(this).text("Importing...").prop('disabled', true);
+
+      $.ajax({
+          url: '../backend/api/web/admin.php', // Adjust to your actual insert endpoint
+          type: 'POST',
+          data: {
+              action: 'import_bulk_teachers', 
+              users: validUsers
+          },
+          success: function(response) {
+              showAlert('success', 'Teachers successfully imported!');
+              setTimeout(() => location.reload(), 1500);
+          },
+          error: function() {
+              showAlert('danger', 'Failed to import teachers.');
+              $('#btnConfirmTeacherImport').text("Import Valid Teachers").prop('disabled', false);
+          }
+      });
+  });
+
   // Initial Load
   loadTeacher();
 });

@@ -122,5 +122,82 @@ $(document).ready(function () {
     reader.readAsText(file);
   });
 
+  $('#studentCsvFile').on('change', function(e) {
+      let file = e.target.files[0];
+      if (!file) return;
+
+      Papa.parse(file, {
+          header: true,
+          skipEmptyLines: true,
+          complete: function(results) {
+              let data = results.data;
+              let tbody = $('#studentPreviewTable tbody');
+              tbody.html('<tr><td colspan="4" class="text-center">Validating...</td></tr>');
+              
+              // Send batch to backend to validate existence
+              $.ajax({
+                  url: '../backend/api/web/admin.php', 
+                  type: 'POST',
+                  data: {
+                      action: 'validate_student_import',
+                      users: data
+                  },
+                  success: function(response) {
+                      let res = JSON.parse(response);
+                      let canImport = false;
+                      tbody.empty();
+                      
+                      res.data.forEach(row => {
+                          let statusHtml = '';
+                          if (row.exists) {
+                              statusHtml = '<span class="badge bg-danger">Already Exists (LRN/Email)</span>';
+                          } else if(row.invalid) {
+                              statusHtml = '<span class="badge bg-warning text-dark">Missing Data</span>';
+                          } else {
+                              statusHtml = '<span class="badge bg-success">Ready to Import</span>';
+                              canImport = true; // Enable button if at least 1 valid row
+                          }
+
+                          tbody.append(`
+                              <tr>
+                                  <td>${row.lrn || '-'}</td>
+                                  <td>${row.first_name} ${row.last_name}</td>
+                                  <td>${row.email || '-'}</td>
+                                  <td>${statusHtml}</td>
+                              </tr>
+                          `);
+                      });
+
+                      // Store only VALID rows in the button for the final import
+                      let validStudents = res.data.filter(r => !r.exists && !r.invalid);
+                      $('#btnConfirmStudentImport').data('valid_users', validStudents);
+                      $('#btnConfirmStudentImport').prop('disabled', !canImport);
+                  }
+              });
+          }
+      });
+  });
+
+  // Perform actual import
+  $('#btnConfirmStudentImport').on('click', function() {
+      let validUsers = $(this).data('valid_users');
+      if (!validUsers || validUsers.length === 0) return;
+
+      $(this).text("Importing...").prop('disabled', true);
+
+      $.ajax({
+          url: '../backend/api/web/admin.php',
+          type: 'POST',
+          data: {
+              requestType: 'ValidateStudentImport', 
+              users: validUsers
+          },
+          success: function(response) {
+              alert('Students successfully imported!');
+              location.reload();
+          }
+      });
+  });
+
   loadAssignedStudents();
 });

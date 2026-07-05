@@ -118,7 +118,7 @@ $isSuperAdmin = $user['role'] === 'super_admin';
         <div class="page-header shadow-sm">
             <div class="d-flex align-items-center">
                 <a href="teachers.php" class="btn btn-sm btn-light text-main me-3 rounded-circle" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="bi bi-arrow-left"></i></a>
-                <span><i class="bi bi-person-lines-fill me-2"></i> Assign Section: <?= htmlspecialchars($teacher['name']) ?></span>
+                <span><i class="bi bi-person-lines-fill me-2"></i> Assign Section: <?= htmlspecialchars($teacher['name'] ?? ($teacher['first_name'] . ' ' . $teacher['last_name']) ?? '') ?></span>
             </div>
             <button class="btn btn-sm btn-light text-main fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#assignSectionModal"><i class="bi bi-plus-circle-fill me-1"></i> Assign Section</button>
         </div>
