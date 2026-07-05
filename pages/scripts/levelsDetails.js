@@ -5,6 +5,86 @@
 const R2_UPLOAD_ENDPOINT = "../backend/api/web/r2_video_upload.php";
 const R2_PART_SIZE = 20 * 1024 * 1024; // 20MB per part (S3/R2 minimum is 5MB, except the final part)
 
+// --- VIDEO UPLOAD LIMITS ---
+const MAX_VIDEO_WIDTH = 1920;
+const MAX_VIDEO_HEIGHT = 1080;
+const MAX_VIDEO_SIZE_MB = 500; // adjust to your storage/bandwidth comfort level
+const MAX_VIDEO_DURATION_MIN = 60; // optional sanity cap, adjust/remove as needed
+
+/**
+ * Reads a video file's dimensions/duration client-side without uploading it.
+ * Returns a Promise resolving to { width, height, duration } or rejecting on error.
+ */
+const readVideoMetadata = (file) => {
+    return new Promise((resolve, reject) => {
+        const videoEl = document.createElement('video');
+        videoEl.preload = 'metadata';
+
+        videoEl.onloadedmetadata = () => {
+            const meta = {
+                width: videoEl.videoWidth,
+                height: videoEl.videoHeight,
+                duration: videoEl.duration,
+            };
+            URL.revokeObjectURL(videoEl.src);
+            resolve(meta);
+        };
+
+        videoEl.onerror = () => {
+            URL.revokeObjectURL(videoEl.src);
+            reject(new Error('Could not read video file. It may be corrupted or in an unsupported format.'));
+        };
+
+        videoEl.src = URL.createObjectURL(file);
+    });
+};
+
+/**
+ * Validates a video file against upload limits.
+ * Returns a Promise that resolves (no value) if valid, or rejects with an Error message.
+ */
+const validateVideoFile = async (file) => {
+    if (!file) {
+        throw new Error('No file selected.');
+    }
+
+    // --- File size check (cheap, no need to read the file) ---
+    const fileSizeMB = file.size / (1024 * 1024);
+    if (fileSizeMB > MAX_VIDEO_SIZE_MB) {
+        throw new Error(
+            `Video file is too large (${fileSizeMB.toFixed(1)}MB). ` +
+            `Maximum allowed is ${MAX_VIDEO_SIZE_MB}MB. Please compress the video before uploading.`
+        );
+    }
+
+    // --- Resolution / duration check (reads video metadata) ---
+    let meta;
+    try {
+        meta = await readVideoMetadata(file);
+    } catch (err) {
+        throw new Error('Could not read video metadata. Please make sure the file is a valid video.');
+    }
+
+    if (meta.width > MAX_VIDEO_WIDTH || meta.height > MAX_VIDEO_HEIGHT) {
+        throw new Error(
+            `Video resolution is too high (${meta.width}x${meta.height}). ` +
+            `Maximum allowed is ${MAX_VIDEO_WIDTH}x${MAX_VIDEO_HEIGHT} (1080p). ` +
+            `Please re-encode/resize the video before uploading.\n\n` +
+            `Tip: Use this ffmpeg command to fix it:\n` +
+            `ffmpeg -i input.mp4 -vf "scale=-2:1080" -c:v libx264 -profile:v high -level 4.1 -crf 23 -c:a aac output.mp4`
+        );
+    }
+
+    if (meta.duration > MAX_VIDEO_DURATION_MIN * 60) {
+        throw new Error(
+            `Video is too long (${(meta.duration / 60).toFixed(1)} minutes). ` +
+            `Maximum allowed is ${MAX_VIDEO_DURATION_MIN} minutes.`
+        );
+    }
+
+    return meta; // caller can use this if needed (e.g. to log/display resolution)
+};
+
 // Global flag to prevent user from leaving the page during upload
 let isUploadingToCloud = false;
 
@@ -317,7 +397,17 @@ $(document).ready(function () {
             return;
         }
 
-        submitBtn.prop("disabled", true);
+        submitBtn.prop("disabled", true).text("Checking video...");
+        try {
+            const meta = await validateVideoFile(file);
+            console.log(`Video validated: ${meta.width}x${meta.height}, ${meta.duration.toFixed(1)}s`);
+        } catch (err) {
+            alert(err.message);
+            submitBtn.prop("disabled", false).text(originalText);
+            return;
+        }
+
+        submitBtn.text(originalText); // reset text before showing upload progress
         isUploadingToCloud = true; // Lock the page
 
         try {
@@ -415,6 +505,19 @@ $(document).ready(function () {
         let fileInput = form.find('input[name="attachment"]')[0];
         let file = fileInput.files[0];
 
+        if (file) {
+            submitBtn.prop("disabled", true).text("Checking video...");
+            try {
+                const meta = await validateVideoFile(file);
+                console.log(`Video validated: ${meta.width}x${meta.height}, ${meta.duration.toFixed(1)}s`);
+            } catch (err) {
+                alert(err.message);
+                submitBtn.prop("disabled", false).text(originalText);
+                return;
+            }
+            submitBtn.text(originalText);
+        }
+        
         try {
             // Only upload to R2 if the admin selected a NEW video
             if (file) {
