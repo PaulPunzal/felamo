@@ -45,26 +45,37 @@ class AdminsController extends db_connect
         }
     }
 
-    public function InsertTeacher($name, $email, $plainPassword)
+    public function InsertTeacher($first_name, $middle_name, $last_name, $email, $plainPassword)
     {
+        $checkEmail = $this->conn->prepare("SELECT id FROM `web_users` WHERE `email` = ?");
+        $checkEmail->bind_param("s", $email);
+        $checkEmail->execute();
+        $checkEmail->store_result();
+        if ($checkEmail->num_rows > 0) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Email is already existing!'
+            ]);
+            $checkEmail->close();
+            return;
+        }
+        $checkEmail->close();
+
         $hashedPassword = password_hash($plainPassword, PASSWORD_DEFAULT);
         $role = 'teacher';
         $is_active = 1;
 
         $stmt = $this->conn->prepare("
-        INSERT INTO `web_users` (`first_name`, `last_name`, `email`, `password`, `role`, `grade_level`, `is_active`)
-        VALUES (?, ?, ?, ?, ?, 7, ?)
-    ");
+            INSERT INTO `web_users` (`first_name`, `middle_name`, `last_name`, `email`, `password`, `role`, `grade_level`, `is_active`)
+            VALUES (?, ?, ?, ?, ?, ?, 7, ?)
+        ");
 
         if (!$stmt) {
-            echo json_encode([
-                'status' => 'error',
-                'message' => 'Failed to prepare statement.'
-            ]);
+            echo json_encode(['status' => 'error', 'message' => 'Failed to prepare statement.']);
             return;
         }
 
-        $stmt->bind_param("ssssi", $name, $email, $hashedPassword, $role, $is_active);
+        $stmt->bind_param("ssssssi", $first_name, $middle_name, $last_name, $email, $hashedPassword, $role, $is_active);
 
         if ($stmt->execute()) {
             $teacher_id = $stmt->insert_id;
@@ -84,10 +95,7 @@ class AdminsController extends db_connect
                 'teacher_id' => $teacher_id
             ]);
         } else {
-            echo json_encode([
-                'status' => 'error',
-                'message' => 'Insert failed: ' . $stmt->error
-            ]);
+            echo json_encode(['status' => 'error', 'message' => 'Insert failed: ' . $stmt->error]);
         }
 
         $stmt->close();
@@ -137,152 +145,5 @@ class AdminsController extends db_connect
         }
 
         $stmt->close();
-    }
-
-    public function ImportTeacherAccounts($accs)
-    {
-        $successCount = 0;
-        $skippedCount = 0;
-        $failCount = 0;
-        $errors = [];
-
-        foreach ($accs as $acc) {
-            $checkStmt = $this->conn->prepare("
-            SELECT 1 FROM `web_users`
-            WHERE `email` = ?
-        ");
-
-            $name = $acc['name'];
-            $email = $acc['email'];
-            $password = $acc['password'];
-
-            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-
-            if (!$checkStmt) {
-                $failCount++;
-                $errors[] = "Failed to prepare SELECT for EMAIL $email";
-                continue;
-            }
-
-            $checkStmt->bind_param("s", $email);
-            $checkStmt->execute();
-            $checkStmt->store_result();
-
-            if ($checkStmt->num_rows > 0) {
-                $skippedCount++;
-                $checkStmt->close();
-                continue;
-            }
-
-            $checkStmt->close();
-
-            $insertStmt = $this->conn->prepare("
-            INSERT INTO `web_users` (`first_name`, `last_name`, `email`, `password`, `role`, `grade_level`, `is_active`)
-            VALUES (?, ?, ?, 'teacher', 7, 1)
-        ");
-
-            if (!$insertStmt) {
-                $failCount++;
-                $errors[] = "Failed to prepare INSERT for Email $email";
-                continue;
-            }
-
-            $insertStmt->bind_param("sss", $name, $email, $hashedPassword);
-
-            if ($insertStmt->execute()) {
-
-                $teacher_id = $this->conn->insert_id;
-
-                $antas_stmt = $this->conn->prepare("INSERT INTO `levels` (`teacher_id`, `level`) VALUES (?, ?)");
-                if ($antas_stmt) {
-                    for ($i = 1; $i <= 4; $i++) {
-                        $antas_stmt->bind_param("ii", $teacher_id, $i);
-                        $antas_stmt->execute();
-                    }
-                    $antas_stmt->close();
-                }
-
-                $successCount++;
-            } else {
-                $failCount++;
-                $errors[] = "Insert failed for Email $email: " . $insertStmt->error;
-            }
-
-            $insertStmt->close();
-        }
-
-        echo json_encode([
-            'status' => 'success',
-            'message' => "$successCount assigned, $skippedCount skipped (already exists), $failCount failed.",
-            'errors' => $errors
-        ]);
-    }
-
-    public function ValidateTeacherImport($users)
-    {
-        $validatedData = [];
-        
-        foreach ($users as $user) {
-            // Match headers from import-teacher-template.csv
-            $email = isset($user['Email']) ? $user['Email'] : '';
-            $name = isset($user['Name']) ? $user['Name'] : '';
-
-            $exists = false;
-            
-            // Check if email is already in web_users
-            if (!empty($email)) {
-                $checkStmt = $this->conn->prepare("SELECT id FROM `web_users` WHERE email = ?");
-                $checkStmt->bind_param("s", $email);
-                $checkStmt->execute();
-                $checkStmt->store_result();
-                
-                if ($checkStmt->num_rows > 0) {
-                    $exists = true;
-                }
-                $checkStmt->close();
-            }
-
-            $user['exists'] = $exists;
-            $user['invalid'] = empty($email) || empty($name);
-            
-            $validatedData[] = $user;
-        }
-
-        echo json_encode(['status' => 'success', 'data' => $validatedData]);
-    }
-
-    public function ValidateStudentImport($users)
-    {
-        $validatedData = [];
-        
-        foreach ($users as $user) {
-            // Match headers from TEST-STUDENT-IMPORT(2).csv
-            $lrn = isset($user['lrn']) ? $user['lrn'] : '';
-            $email = isset($user['email']) ? $user['email'] : '';
-            $firstName = isset($user['first_name']) ? $user['first_name'] : '';
-
-            $exists = false;
-            
-            if (!empty($lrn) || !empty($email)) {
-                // NOTE: Assuming LRN is stored in the 'username' column for students. 
-                // Change 'username = ?' to 'lrn = ?' if you have a specific LRN column.
-                $checkStmt = $this->conn->prepare("SELECT id FROM `web_users` WHERE email = ? OR username = ?");
-                $checkStmt->bind_param("ss", $email, $lrn);
-                $checkStmt->execute();
-                $checkStmt->store_result();
-                
-                if ($checkStmt->num_rows > 0) {
-                    $exists = true;
-                }
-                $checkStmt->close();
-            }
-
-            $user['exists'] = $exists;
-            $user['invalid'] = empty($lrn) || empty($firstName);
-            
-            $validatedData[] = $user;
-        }
-
-        echo json_encode(['status' => 'success', 'data' => $validatedData]);
     }
 }

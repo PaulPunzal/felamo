@@ -98,6 +98,7 @@ $(document).ready(function () {
     e.preventDefault();
 
     const first_name = $("#teacher-first-name").val().trim();
+    const middle_name = $("#teacher-middle-name").val().trim();
     const last_name  = $("#teacher-last-name").val().trim();
     const email = $("#teacher-email").val().trim();
     const password = $("#teacher-password").val();
@@ -113,6 +114,7 @@ $(document).ready(function () {
       data: {
         requestType: "InsertTeacher",
         first_name,
+        middle_name,
         last_name,
         email,
         password,
@@ -154,155 +156,109 @@ $(document).ready(function () {
     });
   });
 
-  // --- CSV IMPORT ---
-  $("#CSV").on("change", function (e) {
-    const file = e.target.files[0];
+  let teacherCsvValidRows = [];
 
-    if (!file) {
-      alert("No file selected.");
-      return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = function (e) {
-      const text = e.target.result;
-      const rows = text.trim().split("\n");
-      let teacherAccs = [];
-
-      rows.slice(1).forEach((row) => {
-        const columns = row.split(",");
-        if(columns.length >= 3) {
-            const accName = columns[0]?.trim();
-            const accEmail = columns[1]?.trim();
-            const accPassword = columns[2]?.trim();
-
-            const obj = {
-              first_name: accName.split(" ")[0],
-              last_name: accName.split(" ").slice(1).join(" "),
-              email: accEmail,
-              password: accPassword,
-            };
-            teacherAccs.push(obj);
-        }
-      });
-
-      console.log(teacherAccs);
+  $("#btn-preview-teacher-csv").on("click", function () {
+      const fileInput = $("#teacherCsvFile")[0];
+      if (!fileInput.files.length) {
+          showAlert("alert-warning", "Please choose a CSV file first.");
+          return;
+      }
+      const formData = new FormData();
+      formData.append("csv_file", fileInput.files[0]);
+      formData.append("preview", "1");
 
       $.ajax({
-        type: "POST",
-        url: "../backend/api/web/admin.php",
-        data: {
-          requestType: "ImportTeachers",
-          teacherAccs: JSON.stringify(teacherAccs),
-        },
-        success: function (response) {
-          try {
-              let res = typeof response === 'string' ? JSON.parse(response) : response;
+          url: "../backend/api/web/upload-teachers.php",
+          type: "POST",
+          data: formData,
+          processData: false,
+          contentType: false,
+          dataType: "json",
+          success: renderTeacherPreview,
+          error: function () {
+              showAlert("alert-danger", "Server error while previewing CSV.");
+          },
+      });
+  });
 
-              if (res.status === "success") {
-                showAlert("alert-success", res.message);
-                loadTeacher();
+  function renderTeacherPreview(res) {
+      $("#teacher-csv-preview-panel").removeClass("d-none");
+      const hasErrors = res.errors && res.errors.length > 0;
+      const hasValid = res.valid && res.valid.length > 0;
+
+      $("#teacher-csv-summary")
+          .removeClass("alert-danger alert-success alert-warning")
+          .addClass(hasErrors ? "alert-danger" : (hasValid ? "alert-success" : "alert-warning"))
+          .html(`<strong>${res.message}</strong>`);
+
+      if (hasErrors) {
+          $("#teacher-csv-errors-block").removeClass("d-none");
+          $("#teacher-csv-errors-list").html(res.errors.map(e => `<li>${e}</li>`).join(""));
+      } else {
+          $("#teacher-csv-errors-block").addClass("d-none");
+      }
+
+      if (res.warnings && res.warnings.length > 0) {
+          $("#teacher-csv-warnings-block").removeClass("d-none");
+          $("#teacher-csv-warnings-list").html(res.warnings.map(w => `<li>${w}</li>`).join(""));
+      } else {
+          $("#teacher-csv-warnings-block").addClass("d-none");
+      }
+
+      teacherCsvValidRows = res.valid || [];
+
+      if (hasValid && !hasErrors) {
+          $("#teacher-csv-valid-block").removeClass("d-none");
+          $("#teacher-confirm-count").text(teacherCsvValidRows.length);
+          $("#btn-confirm-teacher-import").removeClass("d-none");
+          $("#teacher-csv-preview-tbody").html(teacherCsvValidRows.map((r, i) => `
+              <tr>
+                  <td>${i + 1}</td><td>${r.first_name}</td><td>${r.middle_name || ""}</td>
+                  <td>${r.last_name}</td><td>${r.email}</td>
+              </tr>
+          `).join(""));
+      } else {
+          $("#teacher-csv-valid-block").addClass("d-none");
+          $("#btn-confirm-teacher-import").addClass("d-none");
+      }
+  }
+
+  $("#btn-confirm-teacher-import").on("click", function () {
+      const fileInput = $("#teacherCsvFile")[0];
+      if (!fileInput.files.length) {
+          showAlert("alert-danger", "File was lost — please re-select it.");
+          return;
+      }
+      const formData = new FormData();
+      formData.append("csv_file", fileInput.files[0]);
+      const btn = $(this);
+      btn.prop("disabled", true).text("Importing...");
+
+      $.ajax({
+          url: "../backend/api/web/upload-teachers.php",
+          type: "POST",
+          data: formData,
+          processData: false,
+          contentType: false,
+          dataType: "json",
+          success: function (res) {
+              btn.prop("disabled", false).html('Confirm Import (<span id="teacher-confirm-count">0</span> rows)');
+              if (res.status === 200) {
+                  showAlert("alert-success", res.message);
+                  loadTeacher();
+                  $("#importTeacherModal").modal("hide");
+                  $("#teacherCsvFile").val("");
+                  $("#teacher-csv-preview-panel").addClass("d-none");
+                  btn.addClass("d-none");
               } else {
-                showAlert("alert-danger", res.message);
+                  showAlert("alert-danger", res.message);
               }
-          } catch(e) {
-              console.error(e);
-          }
-        },
-      });
-    };
-
-    reader.readAsText(file);
-  });
-
-  // Triggered when user selects a CSV file in the modal
-  $('#teacherCsvFile').on('change', function(e) {
-      let file = e.target.files[0];
-      if (!file) return;
-
-      Papa.parse(file, {
-          header: true,
-          skipEmptyLines: true,
-          complete: function(results) {
-              let data = results.data;
-              let tbody = $('#teacherPreviewTable tbody');
-              tbody.html('<tr><td colspan="4" class="text-center">Validating with Database...</td></tr>');
-              
-              // Send the parsed CSV to the backend to check if emails already exist
-              $.ajax({
-                  url: '../backend/api/web/admin.php', // Adjust if your endpoint is UsersController.php
-                  type: 'POST',
-                  data: {
-                      requestType: 'ValidateTeacherImport',
-                      users: data
-                  },
-                  success: function(response) {
-                      let res = JSON.parse(response);
-                      let canImport = false;
-                      tbody.empty();
-                      
-                      res.data.forEach(row => {
-                          let statusHtml = '';
-                          
-                          // Determine the visual badge status
-                          if (row.exists) {
-                              statusHtml = '<span class="badge bg-danger">Already Exists (Email)</span>';
-                          } else if(row.invalid) {
-                              statusHtml = '<span class="badge bg-warning text-dark">Missing Data</span>';
-                          } else {
-                              statusHtml = '<span class="badge bg-success">Ready to Import</span>';
-                              canImport = true; 
-                          }
-
-                          // Inject row into the visual table
-                          tbody.append(`
-                              <tr>
-                                  <td>${row.Name || '-'}</td>
-                                  <td>${row.Email || '-'}</td>
-                                  <td>${row.Password ? '***' : '-'}</td>
-                                  <td>${statusHtml}</td>
-                              </tr>
-                          `);
-                      });
-
-                      // Save the valid rows in memory so we only import those when they click the button
-                      let validTeachers = res.data.filter(r => !r.exists && !r.invalid);
-                      $('#btnConfirmTeacherImport').data('valid_users', validTeachers);
-                      
-                      // Enable the import button only if there's at least 1 valid row
-                      $('#btnConfirmTeacherImport').prop('disabled', !canImport);
-                  },
-                  error: function() {
-                      showAlert('danger', 'Error validating CSV data.');
-                  }
-              });
-          }
-      });
-  });
-
-  // Final button click to actually insert into the database
-  $('#btnConfirmTeacherImport').on('click', function() {
-      let validUsers = $(this).data('valid_users');
-      if (!validUsers || validUsers.length === 0) return;
-
-      $(this).text("Importing...").prop('disabled', true);
-
-      $.ajax({
-          url: '../backend/api/web/admin.php', // Adjust to your actual insert endpoint
-          type: 'POST',
-          data: {
-              action: 'import_bulk_teachers', 
-              users: validUsers
           },
-          success: function(response) {
-              showAlert('success', 'Teachers successfully imported!');
-              setTimeout(() => location.reload(), 1500);
+          error: function () {
+              btn.prop("disabled", false);
+              showAlert("alert-danger", "Server error during import.");
           },
-          error: function() {
-              showAlert('danger', 'Failed to import teachers.');
-              $('#btnConfirmTeacherImport').text("Import Valid Teachers").prop('disabled', false);
-          }
       });
   });
 

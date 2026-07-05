@@ -46,12 +46,9 @@ $isSuperAdmin = $user['role'] === 'super_admin';
                     <i class="bi bi-person-plus-fill me-1"></i> Add Teacher
                 </button>
                 
-                <div class="input-group input-group-sm" style="width: 140px;">
-                    <label for="CSV" class="input-group-text bg-light border-0 fw-bold text-secondary w-100 justify-content-center shadow-sm" style="cursor:pointer; border-radius: 4px;">
-                        <i class="bi bi-upload me-2"></i> Import CSV
-                    </label>
-                    <input type="file" id="CSV" class="form-control bg-white border-0" accept=".csv" style="display:none;">
-                </div>
+                <button class="btn btn-sm btn-light text-main fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#importTeacherModal">
+                    <i class="bi bi-upload me-1"></i> Import CSV
+                </button>
 
             </div>
         </div>
@@ -84,11 +81,15 @@ $isSuperAdmin = $user['role'] === 'super_admin';
                         <div class="modal-body">
                             
                             <div class="row">
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-4 mb-3">
                                     <label class="form-label">First Name</label>
                                     <input type="text" class="form-control" id="teacher-first-name" name="first_name" required>
                                 </div>
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Middle Name</label>
+                                    <input type="text" class="form-control" id="teacher-middle-name" name="middle_name">
+                                </div>
+                                <div class="col-md-4 mb-3">
                                     <label class="form-label">Last Name</label>
                                     <input type="text" class="form-control" id="teacher-last-name" name="last_name" required>
                                 </div>
@@ -124,29 +125,52 @@ $isSuperAdmin = $user['role'] === 'super_admin';
   <div class="modal-dialog modal-xl">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Preview & Validate Teacher Import</h5>
+        <h5 class="modal-title">Import Teachers via CSV</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <input type="file" id="teacherCsvFile" accept=".csv" class="form-control mb-3">
-        <div class="table-responsive">
-          <table class="table table-bordered table-striped" id="teacherPreviewTable">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Password</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              </tbody>
-          </table>
+        <p class="small text-muted mb-2">
+            CSV columns: <code>first_name, middle_name, last_name, email, password</code>
+            (middle_name may be blank).
+        </p>
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <input type="file" id="teacherCsvFile" accept=".csv" class="form-control">
+            <button type="button" class="btn btn-main text-light" id="btn-preview-teacher-csv">
+                <i class="bi bi-eye me-1"></i> Preview
+            </button>
+        </div>
+
+        <div id="teacher-csv-preview-panel" class="d-none">
+            <div id="teacher-csv-summary" class="alert mb-3"></div>
+
+            <div id="teacher-csv-errors-block" class="d-none mb-3">
+                <h6 class="text-danger fw-bold"><i class="bi bi-x-circle me-1"></i>Errors</h6>
+                <ul id="teacher-csv-errors-list" class="small text-danger mb-0"></ul>
+            </div>
+
+            <div id="teacher-csv-warnings-block" class="d-none mb-3">
+                <h6 class="text-warning fw-bold"><i class="bi bi-exclamation-triangle me-1"></i>Warnings (rows skipped)</h6>
+                <ul id="teacher-csv-warnings-list" class="small text-warning mb-0"></ul>
+            </div>
+
+            <div id="teacher-csv-valid-block" class="d-none">
+                <h6 class="text-success fw-bold"><i class="bi bi-check-circle me-1"></i>Valid Rows Preview</h6>
+                <div class="table-responsive" style="max-height:300px; overflow-y:auto;">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr><th>#</th><th>First Name</th><th>Middle Name</th><th>Last Name</th><th>Email</th></tr>
+                        </thead>
+                        <tbody id="teacher-csv-preview-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-success" id="btnConfirmTeacherImport" disabled>Import Valid Teachers</button>
+        <button type="button" class="btn btn-success d-none" id="btn-confirm-teacher-import">
+            Confirm Import (<span id="teacher-confirm-count">0</span> rows)
+        </button>
       </div>
     </div>
   </div>

@@ -117,6 +117,114 @@ $(document).ready(function() {
         });
     });
 
+    let studentCsvValidRows = [];
+
+    $("#btn-preview-student-csv").on("click", function () {
+        const fileInput = $("#studentCsvFile")[0];
+        if (!fileInput.files.length) {
+            showAlert("alert-warning", "Please choose a CSV file first.");
+            return;
+        }
+        const formData = new FormData();
+        formData.append("csv_file", fileInput.files[0]);
+        formData.append("section_id", $("#hidden_section_id").val());
+        formData.append("preview", "1");
+
+        $.ajax({
+            url: "../backend/api/web/upload-students.php",
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            dataType: "json",
+            success: renderStudentPreview,
+            error: function () {
+                showAlert("alert-danger", "Server error while previewing CSV.");
+            },
+        });
+    });
+
+    function renderStudentPreview(res) {
+        $("#student-csv-preview-panel").removeClass("d-none");
+        const hasErrors = res.errors && res.errors.length > 0;
+        const hasValid = res.valid && res.valid.length > 0;
+
+        $("#student-csv-summary")
+            .removeClass("alert-danger alert-success alert-warning")
+            .addClass(hasErrors ? "alert-danger" : (hasValid ? "alert-success" : "alert-warning"))
+            .html(`<strong>${res.message}</strong>`);
+
+        if (hasErrors) {
+            $("#student-csv-errors-block").removeClass("d-none");
+            $("#student-csv-errors-list").html(res.errors.map(e => `<li>${e}</li>`).join(""));
+        } else {
+            $("#student-csv-errors-block").addClass("d-none");
+        }
+
+        if (res.warnings && res.warnings.length > 0) {
+            $("#student-csv-warnings-block").removeClass("d-none");
+            $("#student-csv-warnings-list").html(res.warnings.map(w => `<li>${w}</li>`).join(""));
+        } else {
+            $("#student-csv-warnings-block").addClass("d-none");
+        }
+
+        studentCsvValidRows = res.valid || [];
+
+        if (hasValid && !hasErrors) {
+            $("#student-csv-valid-block").removeClass("d-none");
+            $("#student-confirm-count").text(studentCsvValidRows.length);
+            $("#btn-confirm-student-import").removeClass("d-none");
+            $("#student-csv-preview-tbody").html(studentCsvValidRows.map((r, i) => `
+                <tr>
+                    <td>${i + 1}</td><td>${r.lrn}</td><td>${r.first_name}</td><td>${r.middle_name || ""}</td>
+                    <td>${r.last_name}</td><td>${r.gender}</td><td>${r.email}</td><td>${r.contact_no}</td>
+                </tr>
+            `).join(""));
+        } else {
+            $("#student-csv-valid-block").addClass("d-none");
+            $("#btn-confirm-student-import").addClass("d-none");
+        }
+    }
+
+    $("#btn-confirm-student-import").on("click", function () {
+        const fileInput = $("#studentCsvFile")[0];
+        if (!fileInput.files.length) {
+            showAlert("alert-danger", "File was lost — please re-select it.");
+            return;
+        }
+        const formData = new FormData();
+        formData.append("csv_file", fileInput.files[0]);
+        formData.append("section_id", $("#hidden_section_id").val());
+        const btn = $(this);
+        btn.prop("disabled", true).text("Importing...");
+
+        $.ajax({
+            url: "../backend/api/web/upload-students.php",
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            dataType: "json",
+            success: function (res) {
+                btn.prop("disabled", false).html('Confirm Import (<span id="student-confirm-count">0</span> rows)');
+                if (res.status === 200) {
+                    showAlert("alert-success", res.message);
+                    loadStudents();
+                    $("#importStudentModal").modal("hide");
+                    $("#studentCsvFile").val("");
+                    $("#student-csv-preview-panel").addClass("d-none");
+                    btn.addClass("d-none");
+                } else {
+                    showAlert("alert-danger", res.message);
+                }
+            },
+            error: function () {
+                btn.prop("disabled", false);
+                showAlert("alert-danger", "Server error during import.");
+            },
+        });
+    });
+
     // Initial Load when page opens
     loadStudents();
 });

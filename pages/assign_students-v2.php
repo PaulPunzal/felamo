@@ -143,10 +143,9 @@ $isSuperAdmin = isset($user['role']) && $user['role'] === 'super_admin';
             </div>
             <div class="d-flex align-items-center gap-2">
                 <button class="btn btn-sm btn-light text-main fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#insertStudentModal"><i class="bi bi-person-plus-fill me-1"></i> Insert Student</button>
-                <div class="input-group input-group-sm" style="width: 220px;">
-                    <label for="CSV" class="input-group-text bg-light border-0 fw-bold text-secondary" style="cursor:pointer;"><i class="bi bi-upload me-2"></i> Import CSV</label>
-                    <input type="file" id="CSV" class="form-control bg-white border-0" accept=".csv" style="display:none;">
-                </div>
+                <button class="btn btn-sm btn-light text-main fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#importStudentModal">
+                    <i class="bi bi-upload me-1"></i> Import CSV
+                </button>
             </div>
         </div>
 
@@ -191,6 +190,61 @@ $isSuperAdmin = isset($user['role']) && $user['role'] === 'super_admin';
                         </div>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <div class="modal fade" id="importStudentModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Import Students via CSV</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-2">
+                        CSV columns: <code>lrn, first_name, middle_name, last_name, birth_date, gender, email, contact_no</code>
+                        (middle_name may be blank, birth_date as M/D/YYYY).
+                    </p>
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <input type="file" id="studentCsvFile" accept=".csv" class="form-control">
+                        <button type="button" class="btn btn-main text-light" id="btn-preview-student-csv">
+                            <i class="bi bi-eye me-1"></i> Preview
+                        </button>
+                    </div>
+
+                    <div id="student-csv-preview-panel" class="d-none">
+                        <div id="student-csv-summary" class="alert mb-3"></div>
+
+                        <div id="student-csv-errors-block" class="d-none mb-3">
+                            <h6 class="text-danger fw-bold"><i class="bi bi-x-circle me-1"></i>Errors</h6>
+                            <ul id="student-csv-errors-list" class="small text-danger mb-0"></ul>
+                        </div>
+
+                        <div id="student-csv-warnings-block" class="d-none mb-3">
+                            <h6 class="text-warning fw-bold"><i class="bi bi-exclamation-triangle me-1"></i>Warnings (rows skipped)</h6>
+                            <ul id="student-csv-warnings-list" class="small text-warning mb-0"></ul>
+                        </div>
+
+                        <div id="student-csv-valid-block" class="d-none">
+                            <h6 class="text-success fw-bold"><i class="bi bi-check-circle me-1"></i>Valid Rows Preview</h6>
+                            <div class="table-responsive" style="max-height:300px; overflow-y:auto;">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light">
+                                        <tr><th>#</th><th>LRN</th><th>First Name</th><th>Middle Name</th><th>Last Name</th><th>Gender</th><th>Email</th><th>Contact</th></tr>
+                                    </thead>
+                                    <tbody id="student-csv-preview-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success d-none" id="btn-confirm-student-import">
+                        Confirm Import (<span id="student-confirm-count">0</span> rows)
+                    </button>
+                </div>
+                </div>
             </div>
         </div>
     </main>
