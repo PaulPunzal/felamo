@@ -78,50 +78,47 @@ if ($otpData['otp'] != $otp) {
     exit;
 }
 
-// --- Re-check LRN assignment + duplicates (in case anything changed since OTP was sent) ---
-$lrn_check_stmt = $conn->prepare("SELECT 1 FROM student_teacher_assignments WHERE student_lrn = ? LIMIT 1");
-$lrn_check_stmt->bind_param("s", $lrn);
-$lrn_check_stmt->execute();
-$lrn_check_stmt->store_result();
+// --- Fetch the existing placeholder row for this LRN (created by the teacher) ---
+$lrn_row_stmt = $conn->prepare("SELECT id, password, email FROM users WHERE lrn = ?");
+$lrn_row_stmt->bind_param("s", $lrn);
+$lrn_row_stmt->execute();
+$lrn_row = $lrn_row_stmt->get_result()->fetch_assoc();
+$lrn_row_stmt->close();
 
-if ($lrn_check_stmt->num_rows === 0) {
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'LRN is not assigned to any teacher / section.'
-    ]);
+if ($lrn_row && !empty($lrn_row['password'])) {
+    echo json_encode(['status' => 'error', 'message' => 'LRN already has an account.']);
     exit;
 }
-$lrn_check_stmt->close();
 
-$stmt = $conn->prepare("SELECT id FROM users WHERE email = ? OR lrn = ?");
-$stmt->bind_param("ss", $email, $lrn);
-$stmt->execute();
-$stmt->store_result();
-if ($stmt->num_rows > 0) {
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Email or LRN already exists.'
-    ]);
+if (!$lrn_row) {
+    echo json_encode(['status' => 'error', 'message' => 'LRN record not found. Please contact your teacher.']);
     exit;
 }
-$stmt->close();
 
-// --- Create the account ---
+// Block if the email belongs to a DIFFERENT lrn
+$email_check_stmt = $conn->prepare("SELECT lrn FROM users WHERE email = ? AND lrn != ?");
+$email_check_stmt->bind_param("ss", $email, $lrn);
+$email_check_stmt->execute();
+$email_check_stmt->store_result();
+if ($email_check_stmt->num_rows > 0) {
+    echo json_encode(['status' => 'error', 'message' => 'Email is already used by another student.']);
+    exit;
+}
+$email_check_stmt->close();
+
+// --- Claim the existing placeholder row (update email + set the real password) ---
 $hashed_password = password_hash($password, PASSWORD_BCRYPT);
 
-$insert = $conn->prepare("INSERT INTO users (lrn, email, password, points) VALUES (?, ?, ?, 0)");
-$insert->bind_param("sss", $lrn, $email, $hashed_password);
+$update = $conn->prepare("UPDATE users SET email = ?, password = ? WHERE id = ?");
+$update->bind_param("ssi", $email, $hashed_password, $lrn_row['id']);
 
-if (!$insert->execute()) {
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Failed to register: ' . $insert->error
-    ]);
+if (!$update->execute()) {
+    echo json_encode(['status' => 'error', 'message' => 'Failed to register: ' . $update->error]);
     exit;
 }
 
-$user_id = $insert->insert_id;
-$insert->close();
+$user_id = $lrn_row['id'];
+$update->close();
 
 // Invalidate the OTP so it can't be reused
 $delete_otp = $conn->prepare("DELETE FROM user_otps WHERE id = ?");

@@ -60,19 +60,28 @@ if ($lrn_check_stmt->num_rows === 0) {
 }
 $lrn_check_stmt->close();
 
-// Don't let someone re-register an existing email/lrn
-$stmt = $conn->prepare("SELECT id FROM users WHERE email = ? OR lrn = ?");
-$stmt->bind_param("ss", $email, $lrn);
-$stmt->execute();
-$stmt->store_result();
-if ($stmt->num_rows > 0) {
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Email or LRN already exists.'
-    ]);
+// Block only if THIS lrn already has a REAL (password-set) account
+$lrn_stmt = $conn->prepare("SELECT password FROM users WHERE lrn = ?");
+$lrn_stmt->bind_param("s", $lrn);
+$lrn_stmt->execute();
+$lrn_row = $lrn_stmt->get_result()->fetch_assoc();
+$lrn_stmt->close();
+
+if ($lrn_row && !empty($lrn_row['password'])) {
+    echo json_encode(['status' => 'error', 'message' => 'LRN already has an account.']);
     exit;
 }
-$stmt->close();
+
+// Block if the email is already used by a DIFFERENT lrn
+$email_stmt = $conn->prepare("SELECT lrn FROM users WHERE email = ? AND lrn != ?");
+$email_stmt->bind_param("ss", $email, $lrn);
+$email_stmt->execute();
+$email_stmt->store_result();
+if ($email_stmt->num_rows > 0) {
+    echo json_encode(['status' => 'error', 'message' => 'Email is already used by another student.']);
+    exit;
+}
+$email_stmt->close();
 
 $otp = (string) rand(100000, 999999);
 
