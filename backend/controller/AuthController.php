@@ -1,7 +1,7 @@
 <?php
 // DELETE THE ERROR LINES THAT WERE HERE (ini_set...)
 
-include(__DIR__ . '/../db/db.php');
+include_once(__DIR__ . '/../db/db.php');
 date_default_timezone_set('Asia/Manila');
 
 require_once __DIR__ . '/../PHPMailer/src/PHPMailer.php';

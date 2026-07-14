@@ -48,30 +48,38 @@ if (!$handle) {
 $isPreview = isset($_POST['preview']) && $_POST['preview'] === '1';
 $ALLOWED_GENDERS = ['Lalaki', 'Babae'];
 
-// Pre-fetch existing lrn/email for duplicate detection (global, across all sections)
-$existingLrns = [];
-$existingEmails = [];
-$fetchStmt = $conn->prepare("SELECT lrn, email FROM `users`");
+// Pre-fetch existing lrn/email/password state for duplicate detection.
+// FIX: a row with an EMPTY password is a pending placeholder (not yet
+// claimed by the student) and is treated differently from a row with a
+// real password hash (a genuinely registered account).
+$existingRealLrns   = []; // lrn => true, only rows with a password already set
+$existingAnyLrns    = []; // lrn => true, any row at all (pending or real)
+$existingEmails     = []; // email (lowercase) => true, any row at all
+$fetchStmt = $conn->prepare("SELECT lrn, email, password FROM `users`");
 if ($fetchStmt) {
     $fetchStmt->execute();
     $result = $fetchStmt->get_result();
     while ($row = $result->fetch_assoc()) {
-        if (!empty($row['lrn'])) $existingLrns[$row['lrn']] = true;
+        if (!empty($row['lrn'])) {
+            $existingAnyLrns[$row['lrn']] = true;
+            if (!empty($row['password'])) {
+                $existingRealLrns[$row['lrn']] = true;
+            }
+        }
         if (!empty($row['email'])) $existingEmails[strtolower(trim($row['email']))] = true;
     }
     $fetchStmt->close();
 }
 
-// LRNs already assigned to THIS section
-$existingAssigned = [];
-$assignStmt = $conn->prepare("SELECT student_lrn FROM `student_teacher_assignments` WHERE section_id = ?");
-$assignStmt->bind_param("i", $section_id);
-$assignStmt->execute();
-$assignResult = $assignStmt->get_result();
-while ($row = $assignResult->fetch_assoc()) {
-    $existingAssigned[$row['student_lrn']] = true;
+// LRNs already assigned to ANY section
+$existingAssignedAnywhere = [];
+$assignAnyStmt = $conn->prepare("SELECT student_lrn FROM `student_teacher_assignments`");
+$assignAnyStmt->execute();
+$assignAnyResult = $assignAnyStmt->get_result();
+while ($row = $assignAnyResult->fetch_assoc()) {
+    $existingAssignedAnywhere[$row['student_lrn']] = true;
 }
-$assignStmt->close();
+$assignAnyStmt->close();
 
 fgetcsv($handle); // skip header row
 
@@ -125,11 +133,11 @@ while (($row = fgetcsv($handle)) !== false) {
     $emailLower = strtolower($email);
     $isDuplicate = false;
 
-    if (isset($existingAssigned[$lrn])) {
-        $warnings[] = "Row $rowIndex: Skipped — LRN $lrn is already assigned to this section.";
+    if (isset($existingAssignedAnywhere[$lrn]) || isset($existingAnyLrns[$lrn])) {
+        $warnings[] = "Row $rowIndex: Skipped — LRN $lrn is already assigned/registered.";
         $isDuplicate = true;
-    } elseif (isset($existingLrns[$lrn]) || isset($existingEmails[$emailLower])) {
-        $warnings[] = "Row $rowIndex: Skipped — LRN or email already exists in another account ($lrn / $email).";
+    } elseif (isset($existingEmails[$emailLower])) {
+        $warnings[] = "Row $rowIndex: Skipped — email already belongs to another student ($email).";
         $isDuplicate = true;
     } elseif (isset($seenInFile[$lrn]) || isset($seenEmailInFile[$emailLower])) {
         $warnings[] = "Row $rowIndex: Skipped — duplicate LRN or email within this CSV file ($lrn / $email).";
@@ -162,7 +170,7 @@ if ($isPreview) {
     echo json_encode([
         'status'   => 200,
         'preview'  => true,
-        'message'  => count($parsedRows) . ' valid row(s) ready to insert. '
+        'message'  => count($parsedRows) . ' valid row(s) ready to import. '
                     . count($warnings) . ' skipped. '
                     . count($errors) . ' error(s).',
         'valid'    => $parsedRows,
@@ -185,18 +193,23 @@ if (!empty($errors)) {
 if (empty($parsedRows)) {
     echo json_encode([
         'status'   => 400,
-        'message'  => 'No valid rows to insert. ' . (!empty($warnings) ? implode(' | ', $warnings) : 'Check your CSV format.'),
+        'message'  => 'No valid rows to import. ' . (!empty($warnings) ? implode(' | ', $warnings) : 'Check your CSV format.'),
         'warnings' => $warnings,
     ]);
     exit;
 }
 
+// FIX: Each row gets a `users` row created with password = '' (a PENDING
+// placeholder holding the name/birth date/gender/email/contact info from
+// the CSV), PLUS a student_teacher_assignments row reserving the LRN.
+// The student later claims the placeholder (email/password get updated)
+// through the app's Sign Up flow — see verify-email.php / register.php.
 $conn->begin_transaction();
 
 try {
     $userStmt = $conn->prepare("
         INSERT INTO users (lrn, first_name, middle_name, last_name, birth_date, gender, email, contact_no, password, points, is_active)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', 0, 1)
     ");
     if (!$userStmt) throw new Exception("Prepare failed: " . $conn->error);
 
@@ -208,12 +221,10 @@ try {
 
     $insertedCount = 0;
     foreach ($parsedRows as $r) {
-        $hashedPassword = password_hash($r['lrn'], PASSWORD_DEFAULT);
-
         $userStmt->bind_param(
-            "sssssssss",
+            "ssssssss",
             $r['lrn'], $r['first_name'], $r['middle_name'], $r['last_name'],
-            $r['birth_date'], $r['gender'], $r['email'], $r['contact_no'], $hashedPassword
+            $r['birth_date'], $r['gender'], $r['email'], $r['contact_no']
         );
         if (!$userStmt->execute()) {
             throw new Exception("User insert failed for LRN {$r['lrn']}: " . $userStmt->error);
@@ -231,7 +242,7 @@ try {
 
     echo json_encode([
         'status'   => 200,
-        'message'  => "Success! Imported $insertedCount student(s)."
+        'message'  => "Success! Imported $insertedCount student(s). They can sign up in the app anytime using their LRN."
                     . (!empty($warnings) ? ' ' . count($warnings) . ' row(s) skipped.' : ''),
         'inserted' => $insertedCount,
         'warnings' => $warnings,

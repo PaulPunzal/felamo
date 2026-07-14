@@ -3,7 +3,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-include(__DIR__ . '/../db/db.php');
+include_once(__DIR__ . '/../db/db.php');
 date_default_timezone_set('Asia/Manila');
 
 class LevelsController extends db_connect
