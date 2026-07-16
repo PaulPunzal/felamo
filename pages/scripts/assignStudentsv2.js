@@ -1,3 +1,9 @@
+$(document).on("input", "#assign_lrn", function () {
+    if (/^\d{12}$/.test($(this).val().trim())) {
+        $(this).removeClass("is-invalid");
+    }
+});
+
 $(document).ready(function() {
     
     // --- HELPER: SHOW ALERT ---
@@ -75,10 +81,18 @@ $(document).ready(function() {
 
     // --- SUBMIT FORM ---
     $("#assign-student-form").submit(function(e) {
-        e.preventDefault(); // Stop page reload
+    e.preventDefault(); // Stop page reload
 
-        const lrn = $("#assign_lrn").val(); 
-        const formData = new FormData(this);
+    const lrn = $("#assign_lrn").val().trim();
+
+    if (!/^\d{12}$/.test(lrn)) {
+        showAlert("alert-danger", "LRN must be exactly 12 digits.");
+        $("#assign_lrn").addClass("is-invalid").focus();
+        return;
+    }
+    $("#assign_lrn").removeClass("is-invalid");
+
+    const formData = new FormData(this);
         
         formData.append("requestType", "InsertStudent");
         formData.append("section_id", $("#hidden_section_id").val());

@@ -79,6 +79,12 @@ class StudentsController extends db_connect
     // here — that would immediately lock the student out of self-signup.
     public function InsertStudent($lrn, $fname, $mname, $lname, $bdate, $gender, $contact, $email, $sectionId)
     {
+        // 0. Validate LRN format — must be exactly 12 digits
+        $lrn = trim($lrn);
+        if (empty($lrn) || !preg_match('/^\d{12}$/', $lrn)) {
+            return ['status' => 'error', 'message' => 'LRN must be exactly 12 digits.'];
+        }
+
         // 1. Get Teacher ID
         $qSection = $this->conn->prepare("SELECT teacher_id FROM sections WHERE id = ?");
         $qSection->bind_param("i", $sectionId);

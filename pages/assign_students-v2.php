@@ -171,7 +171,14 @@ $isSuperAdmin = isset($user['role']) && $user['role'] === 'super_admin';
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <div class="mb-3"><label for="assign_lrn" class="form-label">LRN</label><input type="number" class="form-control" id="assign_lrn" name="lrn" required></div>
+                            <div class="mb-3">
+                                <label for="assign_lrn" class="form-label">LRN</label>
+                                <input type="text" class="form-control" id="assign_lrn" name="lrn" required
+                                    inputmode="numeric" pattern="\d{12}" maxlength="12"
+                                    title="LRN must be exactly 12 digits"
+                                    placeholder="12-digit LRN">
+                                <div class="invalid-feedback" id="assign_lrn_error">LRN must be exactly 12 digits.</div>
+                            </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3"><label for="assign_first_name" class="form-label">First Name</label><input type="text" class="form-control" id="assign_first_name" name="first_name" required></div>
                                 <div class="col-md-6 mb-3"><label for="assign_middle_name" class="form-label">Middle Name</label><input type="text" class="form-control" id="assign_middle_name" name="middle_name"></div>
