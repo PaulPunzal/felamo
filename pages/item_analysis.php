@@ -282,8 +282,8 @@ body             { background-color: #f4f6f9; overflow-x: hidden; }
                 <select id="filter-diff" class="form-select form-select-sm">
                     <option value="all">All Levels</option>
                     <option value="easy">Easy</option>
-                    <option value="medium">Medium</option>
-                    <option value="hard">Hard</option>
+                    <option value="medium">Avg</option>
+                    <option value="hard">Difficult</option>
                 </select>
             </div>
             <div class="filter-group">
@@ -320,6 +320,8 @@ body             { background-color: #f4f6f9; overflow-x: hidden; }
 
 <?php include("components/footer-scripts.php"); ?>
 <script>
+
+const DIFF_LABELS = { easy: 'Easy', medium: 'Avg', hard: 'Difficult' };
 $(document).ready(function () {
 
     // ── Sidebar toggle ──────────────────────────────────────────────────
@@ -359,7 +361,7 @@ $(document).ready(function () {
     // ── Helper: difficulty badge ────────────────────────────────────────
     const diffBadge = (d) => {
         const map = { easy:'diff-easy', medium:'diff-medium', hard:'diff-hard' };
-        return `<span class="diff-badge ${map[d] || ''}">${(d||'').toUpperCase()}</span>`;
+        return `<span class="diff-badge ${map[d] || ''}">${DIFF_LABELS[d] || d}</span>`;
     };
 
     // ── Helper: rate class ──────────────────────────────────────────────
@@ -565,7 +567,7 @@ $(document).ready(function () {
         rows.forEach((q, i) => {
             const qNum       = i + 1;
             const typeLabel  = typeLabels[q.type] || q.type;
-            const difficulty = (q.difficulty || '').charAt(0).toUpperCase() + (q.difficulty || '').slice(1);
+            const difficulty = DIFF_LABELS[q.difficulty] || (q.difficulty || '');
             const noData     = q.total_answers === 0;
             const pctLabel   = noData ? 'N/A' : `${q.percent_correct}%`;
             const pctClass   = noData ? '' : (q.percent_correct >= 75 ? 'cell-correct' : (q.percent_correct >= 50 ? '' : 'cell-wrong'));

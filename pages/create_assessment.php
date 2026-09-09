@@ -222,8 +222,8 @@ if ($aralin_id) {
                         <select id="difficulty-filter" class="form-select form-select-sm border-secondary" style="width: 120px;">
                             <option value="ALL">All Levels</option>
                             <option value="easy">Easy</option>
-                            <option value="medium">Medium</option>
-                            <option value="hard">Hard</option>
+                            <option value="medium">Avg</option>
+                            <option value="hard">Difficult</option>
                         </select>
                     </div>
                 </div>

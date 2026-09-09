@@ -41,6 +41,15 @@ if (!$handle) {
 // ── Constants ─────────────────────────────────────────────────────────────────
 $ALLOWED_TYPES        = ['multiple_choice', 'true_false', 'identification', 'jumbled_word'];
 $ALLOWED_DIFFICULTIES = ['easy', 'medium', 'hard'];
+$DIFFICULTY_ALIASES = [
+    'easy'      => 'easy',
+    'medium'    => 'medium',
+    'avg'       => 'medium',
+    'average'   => 'medium',
+    'hard'      => 'hard',
+    'difficult' => 'hard',
+];
+
 $ALLOWED_TF_ANSWERS   = ['fact','bluff','true', 'false', '1', '0', 'tama', 'mali'];
 $VALID_MCQ_KEYS       = ['A', 'B', 'C', 'D'];
 $MIN_QUESTION_LENGTH  = 0;
@@ -96,7 +105,8 @@ while (($row = fgetcsv($handle)) !== false) {
 
     $concept_group_id = trim($row[0]);
     $type             = strtolower(trim($row[1]));
-    $difficulty       = strtolower(trim($row[2]));
+    $difficulty_raw   = strtolower(trim($row[2]));
+    $difficulty       = $DIFFICULTY_ALIASES[$difficulty_raw] ?? $difficulty_raw;
     $question_text    = trim($row[3]);
     $correct_answer   = trim($row[4]);
     $raw_choices      = isset($row[5]) ? trim($row[5]) : '';
@@ -114,7 +124,7 @@ while (($row = fgetcsv($handle)) !== false) {
 
     // ── Difficulty validation ─────────────────────────────────────────────────
     if (!in_array($difficulty, $ALLOWED_DIFFICULTIES)) {
-        $rowErrors[] = "Invalid difficulty '$difficulty'. Allowed: easy, medium, hard";
+        $rowErrors[] = "Invalid difficulty '$difficulty_raw'. Allowed: Easy, Avg (or Medium), Difficult (or Hard)";
     }
 
     // ── Question text length ──────────────────────────────────────────────────

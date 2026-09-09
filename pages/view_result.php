@@ -154,10 +154,10 @@ $typeLabels = [
     'jumbled_word'    => 'Jumbled Word',
 ];
 
-$diffColors = [
-    'easy'   => 'success',
-    'medium' => 'warning',
-    'hard'   => 'danger',
+$diffLabels = [
+    'easy'   => 'Easy',
+    'medium' => 'Avg',
+    'hard'   => 'Difficult',
 ];
 
 $preparedBy = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
@@ -276,7 +276,7 @@ ob_start();
                 <td><?= $qn ?></td>
                 <td><?= htmlspecialchars($ans['question_text']) ?></td>
                 <td><?= htmlspecialchars($displayType) ?></td>
-                <td><?= htmlspecialchars(ucfirst($difficulty)) ?></td>
+                <td><?= htmlspecialchars($diffLabels[$difficulty] ?? ucfirst($difficulty)) ?></td>
                 <td><?= htmlspecialchars($studentDisp) ?></td>
                 <td><?= htmlspecialchars($correctDisp) ?></td>
                 <td class="<?= $itemCorrect ? 'cell-correct' : 'cell-wrong' ?>"><?= $itemCorrect ? 'Correct' : 'Wrong' ?></td>
@@ -538,7 +538,7 @@ $printReportHtml = ob_get_clean();
                     <span class="q-num">#<?= $qNum ?></span>
                     <span class="badge bg-secondary" style="font-size:0.72rem;"><?= htmlspecialchars($displayType) ?></span>
                     <span class="badge bg-<?= $diffColor ?> text-<?= $difficulty === 'medium' ? 'dark' : 'white' ?>" style="font-size:0.72rem;">
-                        <?= ucfirst($difficulty) ?>
+                        <?= htmlspecialchars($diffLabels[$difficulty] ?? ucfirst($difficulty)) ?>
                     </span>
                     <span class="ms-auto">
                         <?php if ($correct): ?>

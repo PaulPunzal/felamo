@@ -98,7 +98,20 @@ if ($requestType == "GetAssessment") {
     $question_text = $_POST['question_text'];
     $correct_answer = $_POST['correct_answer'];
     $choices = $_POST['choices'] ?? null;
-    $difficulty = $_POST['difficulty'] ?? 'easy'; 
+
+    // Accepts either wording ("easy/medium/hard" or "easy/avg/difficult"),
+    // case-insensitive, and normalizes to the values actually stored in
+    // the DB — same alias map used by upload-questions.php.
+    $DIFFICULTY_ALIASES = [
+        'easy'      => 'easy',
+        'medium'    => 'medium',
+        'avg'       => 'medium',
+        'average'   => 'medium',
+        'hard'      => 'hard',
+        'difficult' => 'hard',
+    ];
+    $difficulty_raw = strtolower(trim($_POST['difficulty'] ?? 'easy'));
+    $difficulty     = $DIFFICULTY_ALIASES[$difficulty_raw] ?? 'easy';
 
     if (!empty($choices)) {
         // Update MCQ with choices JSON and difficulty

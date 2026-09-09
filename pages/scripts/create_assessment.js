@@ -1,3 +1,4 @@
+const DIFF_LABELS = { easy: 'Easy', medium: 'Avg', hard: 'Difficult' };
 let questionsList = []; // Array to store questions temporarily
 let editingIndex = -1;  // Tracks which question is currently being edited (-1 means creating new)
 
@@ -444,7 +445,7 @@ function renderQuestions() {
                         </button>
                     </div>
                     <span class="badge ${badgeClass} mb-2 me-1">${displayType}</span>
-                    <span class="badge ${diffBadgeClass} mb-2">${(q.difficulty || 'easy').toUpperCase()}</span>
+                    <span class="badge ${diffBadgeClass} mb-2">${DIFF_LABELS[q.difficulty] || 'Easy'}</span>
                     <p class="mb-1 fw-bold pe-5">${q.question}</p>
                     <small class="text-muted">Answer: ${displayAnswer}</small>
                 </div>
