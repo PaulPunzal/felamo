@@ -125,15 +125,23 @@ function resolveCorrectDisplay($type, $correctAnswer, $choicesDecoded) {
                : $correctAnswer;
     }
     if ($type === 'true_false') {
-        return (in_array(strtolower($correctAnswer), ['true', '1', 'tama'])) ? 'Fact (Tama)' : 'Bluff (Mali)';
+        // FIX: added 'fact' so correct_answer values stored as the literal
+        // word "Fact" (e.g. from CSV import) are recognized the same way
+        // submit-assessment.php recognizes them during grading.
+        return (in_array(strtolower(trim($correctAnswer)), ['true', '1', 'tama', 'fact'])) ? 'Fact (Tama)' : 'Bluff (Mali)';
     }
     return $correctAnswer;
 }
 
 function isCorrect($type, $studentAnswer, $correctAnswer) {
     if ($type === 'true_false') {
-        $studentBool = in_array(strtolower(trim($studentAnswer)), ['1','true','tama']);
-        $correctBool = in_array(strtolower(trim($correctAnswer)), ['1','true','tama']);
+        // FIX: added 'fact' to match the exact "is this true" list used in
+        // submit-assessment.php's grading (['true','1','tama','fact','Fact']).
+        // Without this, a correct_answer stored as the literal word "Fact"
+        // never matched here, so every correct Fact/Bluff answer showed as
+        // Wrong in the breakdown even though the raw score was already right.
+        $studentBool = in_array(strtolower(trim($studentAnswer)), ['1','true','tama','fact']);
+        $correctBool = in_array(strtolower(trim($correctAnswer)), ['1','true','tama','fact']);
         return $studentBool === $correctBool;
     }
     return strtolower(trim($studentAnswer)) === strtolower(trim($correctAnswer));
