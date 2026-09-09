@@ -341,6 +341,7 @@ $(document).ready(function () {
         assessmentTitle: <?= json_encode($hdr['assessment_title']) ?>,
         aralinLabel:     <?= json_encode('Aralin ' . (int)$hdr['aralin_no'] . ' — ' . $hdr['aralin_title']) ?>,
         markahan:        <?= json_encode($markahan) ?>,
+        preparedBy:      <?= json_encode(trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''))) ?>,
     };
 
     // ── Helper: type badge ──────────────────────────────────────────────
@@ -626,7 +627,7 @@ $(document).ready(function () {
                 <h1>Felamo</h1>
                 <h2>Item Analysis Report &mdash; ${escHtml(reportMeta.assessmentTitle)}</h2>
             </div>
-            <div class="report-meta">Generated: ${generatedStr}</div>
+            <div class="report-meta">Generated: ${generatedStr}${reportMeta.preparedBy ? ' &mdash; Printed by: ' + escHtml(reportMeta.preparedBy) : ''}</div>
 
             <table class="summary-grid">
                 <tr>

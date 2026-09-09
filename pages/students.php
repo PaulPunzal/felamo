@@ -157,6 +157,7 @@ try {
         const url_section_id = $("#url_section_id").val(); 
         let allStudents = [];
         let lastFiltered = []; // NEW: keeps whatever is currently on screen, for printing
+        const preparedBy = <?= json_encode(trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''))) ?>;
 
         // Check URL for Section ID and Pre-Select it
         if (url_section_id) {
@@ -310,7 +311,7 @@ try {
                     <h1>Felamo</h1>
                     <h2>Master Student Roster Report</h2>
                 </div>
-                <div class="report-meta">Generated: ${generatedStr}</div>
+                <div class="report-meta">Generated: ${generatedStr}${preparedBy ? ' &mdash; Printed by: ' + escapeHtml(preparedBy) : ''}</div>
                 <div class="report-summary">Total Students: ${rows.length}</div>
 
                 <table>

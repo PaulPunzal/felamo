@@ -233,13 +233,17 @@ foreach ($students as $s) {
 </div>
 
 <?php include("components/footer-scripts.php"); ?>
-
+const preparedBy = <?= json_encode(trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''))) ?>;
 <script>
+
     $(document).ready(function() {
         // Sidebar Toggle
         $(document).off('click', '.sidebar-toggle').on('click', '.sidebar-toggle', function() {
             $(".dashboard-wrapper").toggleClass("toggled");
         });
+
+        const preparedBy = <?= json_encode(trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''))) ?>;
+
 
         // DOM Filtering Logic
         const applyFilters = () => {
@@ -356,7 +360,7 @@ foreach ($students as $s) {
                         <h1>Felamo</h1>
                         <h2>Academic Progress Report</h2>
                     </div>
-                    <div class="report-meta">Generated: ${generatedStr}</div>
+                    <div class="report-meta">Generated: ${generatedStr}${preparedBy ? ' &mdash; Printed by: ' + escapeHtml(preparedBy) : ''}</div>
                     <div class="report-summary">Total Students: ${count}</div>
 
                     <table>

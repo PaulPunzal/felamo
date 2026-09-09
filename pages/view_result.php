@@ -152,6 +152,8 @@ $diffColors = [
     'hard'   => 'danger',
 ];
 
+$preparedBy = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+
 // ── Build the "Excel design" print report (same look as taken_assessments.php's
 //    buildPrintReport: Felamo letterhead, red table header, striped rows) ──────
 ob_start();
@@ -207,7 +209,9 @@ ob_start();
         <h1>Felamo</h1>
         <h2>Assessment Result Report &mdash; <?= htmlspecialchars($result['assessment_title']) ?></h2>
     </div>
-    <div class="report-meta">Generated: <?= date('F j, Y \a\t g:i A') ?></div>
+    <div class="report-meta">
+        Generated: <?= date('F j, Y \a\t g:i A') ?><?= $preparedBy ? ' &mdash; Printed by: ' . htmlspecialchars($preparedBy) : '' ?>
+    </div>
 
     <table class="summary-grid">
         <tr>

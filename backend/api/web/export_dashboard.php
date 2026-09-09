@@ -1,5 +1,9 @@
 <?php
 // backend/api/web/export_dashboard.php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 include_once(__DIR__ . '/../../db/db.php');
 
 $database = new db_connect();
@@ -8,9 +12,27 @@ $conn = $database->connect();
 $user_id = $_GET['user_id'] ?? null;
 $is_admin = $_GET['is_admin'] ?? 'false';
 
+// Resolve the logged-in web user's name for the "Printed by" line
+$preparedBy = '';
+if (isset($_SESSION['id'])) {
+    $whoStmt = $conn->prepare("SELECT first_name, last_name FROM web_users WHERE id = ?");
+    $whoStmt->bind_param("i", $_SESSION['id']);
+    $whoStmt->execute();
+    $whoRow = $whoStmt->get_result()->fetch_assoc();
+    $whoStmt->close();
+    if ($whoRow) {
+        $preparedBy = trim(($whoRow['first_name'] ?? '') . ' ' . ($whoRow['last_name'] ?? ''));
+    }
+}
+
 header('Content-Type: text/csv');
 header('Content-Disposition: attachment; filename="dashboard_summary.csv"');
 $output = fopen('php://output', 'w');
+
+if ($preparedBy !== '') {
+    fputcsv($output, array('Printed by: ' . $preparedBy . ' | Generated: ' . date('F j, Y g:i A')));
+    fputcsv($output, array()); // blank spacer row
+}
 
 if ($is_admin === 'true') {
     // --- SUPER ADMIN REPORT ---

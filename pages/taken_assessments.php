@@ -241,6 +241,7 @@ if ($level_id) {
 $(document).ready(function () {
     const level_id   = $("#hidden_level_id").val();
     const levelText  = <?= json_encode($levelText . " Markahan") ?>;
+    const preparedBy = <?= json_encode(trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''))) ?>;
     let allData      = []; // store full dataset for client-side filtering
     let lastFiltered = []; // store whatever is currently visible, for printing
 
@@ -547,7 +548,7 @@ $(document).ready(function () {
                 <h1>Felamo</h1>
                 <h2>Taken Assessments Report &mdash; ${escapeHtml(levelText)}</h2>
             </div>
-            <div class="report-meta">Generated: ${generatedStr}</div>
+            <div class="report-meta">Generated: ${generatedStr}${preparedBy ? ' &mdash; Printed by: ' + escapeHtml(preparedBy) : ''}</div>
             <div class="report-summary">Total Records: ${rows.length}</div>
 
             <table>
