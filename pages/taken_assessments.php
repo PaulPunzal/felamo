@@ -489,7 +489,22 @@ $(document).ready(function () {
                 margin: 0;
                 padding: 30px 40px;
             }
+            
+            .print-tip {
+                text-align: center;
+                font-size: 11px;
+                color: #0d47a1;
+                background: #e3f2fd;
+                border: 1px solid #90caf9;
+                border-radius: 6px;
+                padding: 6px 10px;
+                margin-bottom: 14px;
+            }
+            @media print {
+                .print-tip { display: none; }
+            }
             .report-header { text-align: center; margin-bottom: 6px; }
+            
             .report-header h1 {
                 font-size: 20px;
                 font-weight: 700;
@@ -549,6 +564,7 @@ $(document).ready(function () {
                 <h2>Taken Assessments Report &mdash; ${escapeHtml(levelText)}</h2>
             </div>
             <div class="report-meta">Generated: ${generatedStr}${preparedBy ? ' &mdash; Printed by: ' + escapeHtml(preparedBy) : ''}</div>
+            <div class="print-tip"> For page numbers, click "More settings" in the print dialog and enable "Headers and footers".</div>
             <div class="report-summary">Total Records: ${rows.length}</div>
 
             <table>

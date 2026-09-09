@@ -10,13 +10,43 @@ if ($isSuperAdmin) {
     $query = "
         SELECT 
             u.id AS user_id, u.first_name, u.last_name, u.lrn, s.section_name,
-            (SELECT COUNT(*) FROM student_aralin_progress sap WHERE sap.user_id = u.id) AS videos_watched,
-            (SELECT COUNT(*) FROM aralin) AS total_videos,
-            (SELECT COUNT(DISTINCT assessment_id) FROM assessment_results ar WHERE ar.lrn = u.lrn AND ar.is_completed = 1) AS quizzes_passed,
-            (SELECT COUNT(*) FROM assessments) AS total_quizzes,
-            (SELECT ROUND(AVG((points / total) * 100), 2) FROM assessment_results ar WHERE ar.lrn = u.lrn AND ar.is_completed = 1) AS average_score,
-            (SELECT MAX(completed_at) FROM student_aralin_progress sap WHERE sap.user_id = u.id) AS latest_video,
-            (SELECT MAX(created_at) FROM assessment_results ar WHERE ar.lrn = u.lrn AND ar.is_completed = 1) AS latest_quiz
+            (SELECT COUNT(*) 
+            FROM student_aralin_progress sap
+            JOIN aralin a2 ON sap.aralin_id = a2.id
+            JOIN levels l2 ON a2.level_id = l2.id
+            WHERE sap.user_id = u.id AND l2.teacher_id = s.teacher_id) AS videos_watched,
+            (SELECT COUNT(*) 
+            FROM aralin a3
+            JOIN levels l3 ON a3.level_id = l3.id
+            WHERE l3.teacher_id = s.teacher_id) AS total_videos,
+            (SELECT COUNT(DISTINCT ar.assessment_id) 
+            FROM assessment_results ar
+            JOIN assessments a4 ON ar.assessment_id = a4.id
+            JOIN aralin a5 ON a4.aralin_id = a5.id
+            JOIN levels l4 ON a5.level_id = l4.id
+            WHERE ar.lrn = u.lrn AND ar.is_completed = 1 AND l4.teacher_id = s.teacher_id) AS quizzes_passed,
+            (SELECT COUNT(*) 
+            FROM assessments a6
+            JOIN aralin a7 ON a6.aralin_id = a7.id
+            JOIN levels l5 ON a7.level_id = l5.id
+            WHERE l5.teacher_id = s.teacher_id) AS total_quizzes,
+            (SELECT ROUND(AVG((ar.points / ar.total) * 100), 2) 
+            FROM assessment_results ar
+            JOIN assessments a8 ON ar.assessment_id = a8.id
+            JOIN aralin a9 ON a8.aralin_id = a9.id
+            JOIN levels l6 ON a9.level_id = l6.id
+            WHERE ar.lrn = u.lrn AND ar.is_completed = 1 AND l6.teacher_id = s.teacher_id) AS average_score,
+            (SELECT MAX(sap.completed_at) 
+            FROM student_aralin_progress sap
+            JOIN aralin a10 ON sap.aralin_id = a10.id
+            JOIN levels l7 ON a10.level_id = l7.id
+            WHERE sap.user_id = u.id AND l7.teacher_id = s.teacher_id) AS latest_video,
+            (SELECT MAX(ar.created_at) 
+            FROM assessment_results ar
+            JOIN assessments a11 ON ar.assessment_id = a11.id
+            JOIN aralin a12 ON a11.aralin_id = a12.id
+            JOIN levels l8 ON a12.level_id = l8.id
+            WHERE ar.lrn = u.lrn AND ar.is_completed = 1 AND l8.teacher_id = s.teacher_id) AS latest_quiz
         FROM student_teacher_assignments AS sta
         LEFT JOIN users AS u ON sta.student_lrn = u.lrn
         LEFT JOIN sections AS s ON sta.section_id = s.id
@@ -27,13 +57,43 @@ if ($isSuperAdmin) {
     $query = "
         SELECT 
             u.id AS user_id, u.first_name, u.last_name, u.lrn, s.section_name,
-            (SELECT COUNT(*) FROM student_aralin_progress sap WHERE sap.user_id = u.id) AS videos_watched,
-            (SELECT COUNT(*) FROM aralin) AS total_videos,
-            (SELECT COUNT(DISTINCT assessment_id) FROM assessment_results ar WHERE ar.lrn = u.lrn AND ar.is_completed = 1) AS quizzes_passed,
-            (SELECT COUNT(*) FROM assessments) AS total_quizzes,
-            (SELECT ROUND(AVG((points / total) * 100), 2) FROM assessment_results ar WHERE ar.lrn = u.lrn AND ar.is_completed = 1) AS average_score,
-            (SELECT MAX(completed_at) FROM student_aralin_progress sap WHERE sap.user_id = u.id) AS latest_video,
-            (SELECT MAX(created_at) FROM assessment_results ar WHERE ar.lrn = u.lrn AND ar.is_completed = 1) AS latest_quiz
+            (SELECT COUNT(*) 
+            FROM student_aralin_progress sap
+            JOIN aralin a2 ON sap.aralin_id = a2.id
+            JOIN levels l2 ON a2.level_id = l2.id
+            WHERE sap.user_id = u.id AND l2.teacher_id = s.teacher_id) AS videos_watched,
+            (SELECT COUNT(*) 
+            FROM aralin a3
+            JOIN levels l3 ON a3.level_id = l3.id
+            WHERE l3.teacher_id = s.teacher_id) AS total_videos,
+            (SELECT COUNT(DISTINCT ar.assessment_id) 
+            FROM assessment_results ar
+            JOIN assessments a4 ON ar.assessment_id = a4.id
+            JOIN aralin a5 ON a4.aralin_id = a5.id
+            JOIN levels l4 ON a5.level_id = l4.id
+            WHERE ar.lrn = u.lrn AND ar.is_completed = 1 AND l4.teacher_id = s.teacher_id) AS quizzes_passed,
+            (SELECT COUNT(*) 
+            FROM assessments a6
+            JOIN aralin a7 ON a6.aralin_id = a7.id
+            JOIN levels l5 ON a7.level_id = l5.id
+            WHERE l5.teacher_id = s.teacher_id) AS total_quizzes,
+            (SELECT ROUND(AVG((ar.points / ar.total) * 100), 2) 
+            FROM assessment_results ar
+            JOIN assessments a8 ON ar.assessment_id = a8.id
+            JOIN aralin a9 ON a8.aralin_id = a9.id
+            JOIN levels l6 ON a9.level_id = l6.id
+            WHERE ar.lrn = u.lrn AND ar.is_completed = 1 AND l6.teacher_id = s.teacher_id) AS average_score,
+            (SELECT MAX(sap.completed_at) 
+            FROM student_aralin_progress sap
+            JOIN aralin a10 ON sap.aralin_id = a10.id
+            JOIN levels l7 ON a10.level_id = l7.id
+            WHERE sap.user_id = u.id AND l7.teacher_id = s.teacher_id) AS latest_video,
+            (SELECT MAX(ar.created_at) 
+            FROM assessment_results ar
+            JOIN assessments a11 ON ar.assessment_id = a11.id
+            JOIN aralin a12 ON a11.aralin_id = a12.id
+            JOIN levels l8 ON a12.level_id = l8.id
+            WHERE ar.lrn = u.lrn AND ar.is_completed = 1 AND l8.teacher_id = s.teacher_id) AS latest_quiz
         FROM student_teacher_assignments AS sta
         LEFT JOIN users AS u ON sta.student_lrn = u.lrn
         LEFT JOIN sections AS s ON sta.section_id = s.id
