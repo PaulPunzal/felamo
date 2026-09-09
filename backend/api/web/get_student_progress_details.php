@@ -5,13 +5,14 @@ header('Content-Type: application/json');
 // Use your standard connection file which provides the $conn object
 require_once '../../config/connection.php'; 
 
-if (!isset($_GET['user_id']) || !isset($_GET['lrn'])) {
-    echo json_encode(['error' => 'Missing student ID or LRN']);
+if (!isset($_GET['user_id']) || !isset($_GET['lrn']) || !isset($_GET['teacher_id'])) {
+    echo json_encode(['error' => 'Missing student ID, LRN, or Teacher ID']);
     exit;
 }
 
 $user_id = intval($_GET['user_id']);
 $lrn = $_GET['lrn'];
+$teacher_id = intval($_GET['teacher_id']);
 
 try {
     $query = "
@@ -29,12 +30,13 @@ try {
         LEFT JOIN student_aralin_progress sap ON a.id = sap.aralin_id AND sap.user_id = ?
         LEFT JOIN assessments ass ON a.id = ass.aralin_id
         LEFT JOIN assessment_results ar ON ass.id = ar.assessment_id AND ar.lrn = ? AND ar.is_completed = 1
+        WHERE l.teacher_id = ?
         ORDER BY l.level, a.aralin_no
     ";
 
     // Use MySQLi syntax ($conn) instead of PDO ($pdo)
     $stmt = $conn->prepare($query);
-    $stmt->bind_param("is", $user_id, $lrn); // "i" for integer, "s" for string
+    $stmt->bind_param("isi", $user_id, $lrn, $teacher_id); // "i","s","i"
     $stmt->execute();
     $result = $stmt->get_result();
     $results = $result->fetch_all(MYSQLI_ASSOC);

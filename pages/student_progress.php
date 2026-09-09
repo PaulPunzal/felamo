@@ -9,7 +9,7 @@ $isSuperAdmin = isset($user['role']) && $user['role'] === 'super_admin';
 if ($isSuperAdmin) {
     $query = "
         SELECT 
-            u.id AS user_id, u.first_name, u.last_name, u.lrn, s.section_name,
+            u.id AS user_id, u.first_name, u.last_name, u.lrn, s.section_name, s.teacher_id,
             (SELECT COUNT(*) 
             FROM student_aralin_progress sap
             JOIN aralin a2 ON sap.aralin_id = a2.id
@@ -56,7 +56,7 @@ if ($isSuperAdmin) {
 } else {
     $query = "
         SELECT 
-            u.id AS user_id, u.first_name, u.last_name, u.lrn, s.section_name,
+            u.id AS user_id, u.first_name, u.last_name, u.lrn, s.section_name, s.teacher_id,
             (SELECT COUNT(*) 
             FROM student_aralin_progress sap
             JOIN aralin a2 ON sap.aralin_id = a2.id
@@ -225,6 +225,7 @@ foreach ($students as $s) {
                                 $lrn = $row['lrn'] ?? '';
                                 $secName = $row['section_name'] ?? 'N/A';
                                 $userId = $row['user_id'] ?? 0;
+                                $rowTeacherId = $row['teacher_id'] ?? 0;
 
                                 // 2. Calculate Score Badge
                                 $score = $row['average_score'] ?? 0;
@@ -264,6 +265,7 @@ foreach ($students as $s) {
                                             data-user-id="<?= $userId ?>" 
                                             data-lrn="<?= htmlspecialchars($lrn) ?>"
                                             data-name="<?= htmlspecialchars($fname . ' ' . $lname) ?>"
+                                            data-teacher-id="<?= $rowTeacherId ?>"
                                             title="View Breakdown">
                                         <i class="bi bi-eye-fill"></i> View
                                     </button>
@@ -475,7 +477,7 @@ const preparedBy = <?= json_encode(trim(($user['first_name'] ?? '') . ' ' . ($us
 
             $.ajax({
                 type: "GET",
-                url: `../backend/api/web/get_student_progress_details.php?user_id=${btn.data("user-id")}&lrn=${btn.data("lrn")}`,
+                url: `../backend/api/web/get_student_progress_details.php?user_id=${btn.data("user-id")}&lrn=${btn.data("lrn")}&teacher_id=${btn.data("teacher-id")}`,
                 success: function(res) {
                     if (res.error) {
                         $("#modalProgressBody").html(`<div class="alert alert-danger">${res.error}</div>`);
