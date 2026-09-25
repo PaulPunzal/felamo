@@ -83,7 +83,7 @@ try {
         <div class="filter-bar">
             <div class="filter-group">
                 <label><i class="bi bi-person me-1"></i>Search Name / LRN</label>
-                <input type="text" id="filter-text" class="form-control form-control-sm" placeholder="Enter name or LRN...">
+                <input type="text" id="filter-text" class="form-control form-control-sm" placeholder="Enter name or LRN..">
             </div>
             <div class="filter-group">
                 <label><i class="bi bi-diagram-3 me-1"></i>Section</label>

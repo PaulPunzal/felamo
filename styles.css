@@ -98,6 +98,7 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; color: var(--color-text); }
   transition: var(--transition-normal);
   display: inline-flex;
   align-items: center;
+  justify-content: center;  
   gap: 6px;
 }
 .btn-main:hover {
@@ -122,6 +123,7 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; color: var(--color-text); }
   transition: var(--transition-normal);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
 }
 .btn-sky:hover {
