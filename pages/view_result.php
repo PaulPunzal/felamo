@@ -96,7 +96,7 @@ if ($ans_stmt) {
 $score      = (int)$result['points'];
 $total      = (int)$result['total'];
 $pct        = $total > 0 ? round(($score / $total) * 100) : 0;
-$passed     = $total > 0 && $pct >= 80;
+$passed     = $total > 0 && $pct >= 50;
 
 $ordinalMap = [1 => "Unang", 2 => "Ikalawang", 3 => "Ikatlong", 4 => "Ika-apat na"];
 $markahan   = isset($ordinalMap[$result['markahan_level']]) 
@@ -498,7 +498,7 @@ $printReportHtml = ob_get_clean();
                     <div style="font-size:0.8rem; color:#6c757d; font-weight:600;">RAW SCORE</div>
                 </div>
                 <div class="text-center text-muted" style="font-size:0.82rem;">
-                    Passing: 80% (<?= $total > 0 ? ceil($total * 0.8) : 'N/A' ?> items)
+                    Passing: 50% (<?= $total > 0 ? ceil($total * 0.5) : 'N/A' ?> items)
                 </div>
             </div>
         </div>

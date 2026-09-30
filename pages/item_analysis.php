@@ -396,7 +396,7 @@ $(document).ready(function () {
             });
             choicesHtml += '</div>';
         } else if (q.type === 'true_false') {
-            const isTama = ['1','true','tama'].includes(
+            const isTama = ['1','true','tama','fact'].includes(
                 (q.correct_answer || '').toLowerCase().trim()
             );
             choicesHtml = `

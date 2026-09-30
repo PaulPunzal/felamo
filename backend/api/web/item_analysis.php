@@ -101,10 +101,10 @@ if ($requestType === 'GetItemAnalysis') {
 
                     WHEN 'true_false' THEN
                         IF(
-                            (LOWER(TRIM(aal.student_answer)) IN ('1','true','tama'))
+                            (LOWER(TRIM(aal.student_answer)) IN ('1','true','tama','fact'))
                             =
                             (LOWER(TRIM(q.correct_answer COLLATE utf8mb4_general_ci))
-                                IN ('1','true','tama')),
+                                IN ('1','true','tama','fact')),
                             1, 0
                         )
 

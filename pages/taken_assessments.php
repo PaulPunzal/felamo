@@ -332,7 +332,7 @@ $(document).ready(function () {
 
             if (total > 0) {
                 pct = (score / total) * 100;
-                badgeClass = pct >= 80 ? "score-pass" : "score-fail";
+                badgeClass = pct >= 50 ? "score-pass" : "score-fail";
                 scoreLabel = `${score} / ${total} (${Math.round(pct)}%)`;
             }
 
@@ -348,7 +348,7 @@ $(document).ready(function () {
                     <td class="text-date">${dateTaken}</td>
                     <td>
                         <span class="score-badge ${badgeClass}">
-                            ${total > 0 ? (pct >= 80 ? '<i class="bi bi-check-circle-fill me-1"></i>' : '<i class="bi bi-x-circle-fill me-1"></i>') : '<i class="bi bi-hourglass-split me-1"></i>'}
+                            ${total > 0 ? (pct >= 50 ? '<i class="bi bi-check-circle-fill me-1"></i>' : '<i class="bi bi-x-circle-fill me-1"></i>') : '<i class="bi bi-hourglass-split me-1"></i>'}
                             ${scoreLabel}
                         </span>
                     </td>
@@ -386,8 +386,8 @@ $(document).ready(function () {
             if (sectionQ && !sectionName.includes(sectionQ)) return false;
             if (dateQ    && dateStr !== dateQ)               return false;
 
-            if (resultQ === "passed" && !(total > 0 && pct >= 80)) return false;
-            if (resultQ === "failed" && (total > 0 && pct >= 80))  return false;
+            if (resultQ === "passed" && !(total > 0 && pct >= 50)) return false;
+            if (resultQ === "failed" && (total > 0 && pct >= 50))  return false;
 
             return true;
         });
@@ -402,7 +402,7 @@ $(document).ready(function () {
         data.forEach(item => {
             const score = parseInt(item.points) || 0;
             const total = parseInt(item.total)  || 0;
-            if (total > 0 && (score / total) >= 0.80) passed++;
+            if (total > 0 && (score / total) >= 0.50) passed++;
             else failed++;
         });
         $("#stat-total").text(data.length);

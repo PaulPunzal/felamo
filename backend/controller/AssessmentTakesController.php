@@ -46,9 +46,9 @@ class AssessmentTakesController extends db_connect
 
         // Append pass/fail filter BEFORE GROUP BY
         if ($filter === "PASSED") {
-            $sql .= " AND at.total > 0 AND at.points >= (at.total * 0.80)";
+            $sql .= " AND at.total > 0 AND at.points >= (at.total * 0.50)";
         } elseif ($filter === "FAILED") {
-            $sql .= " AND (at.total = 0 OR at.points < (at.total * 0.80))";
+            $sql .= " AND (at.total = 0 OR at.points < (at.total * 0.50))";
         }
 
         $sql .= " GROUP BY at.id, at.lrn, at.assessment_id, s.section_name
