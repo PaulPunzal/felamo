@@ -203,8 +203,8 @@ if ($passed) {
 
         // ── Award bonus points ────────────────────────────────────────────
         $bonus = 35;
-        $upd = $conn->prepare("UPDATE users SET points = points + ? WHERE id = ?");
-        $upd->bind_param("ii", $bonus, $user_id);
+        $upd = $conn->prepare("UPDATE users SET points = points + ?, total_points = total_points + ? WHERE id = ?");
+        $upd->bind_param("iii", $bonus, $bonus, $user_id);
         $upd->execute();
         $upd->close();
 

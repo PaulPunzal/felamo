@@ -87,11 +87,11 @@ $section_stmt->fetch();
 $section_stmt->close();
 
 $query = "
-    SELECT u.*
+    SELECT u.id, u.first_name, u.last_name, u.total_points, u.points
     FROM student_teacher_assignments AS sta
     JOIN users AS u ON sta.student_lrn = u.lrn
     WHERE sta.section_id = ?
-    ORDER BY u.points DESC
+    ORDER BY u.total_points DESC, u.id ASC
 ";
 
 $stmt = $conn->prepare($query);
@@ -106,6 +106,7 @@ while ($row = $result->fetch_assoc()) {
 
 echo json_encode([
     'status' => 'success',
+    'my_user_id' => (int)$user_id,
     'data' => $data
 ]);
 exit;

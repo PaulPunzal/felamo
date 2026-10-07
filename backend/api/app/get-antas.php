@@ -119,7 +119,7 @@ while ($row = $result->fetch_assoc()) {
             case 1: $title = 'Unang markahan'; break;
             case 2: $title = 'Pangalawang markahan'; break;
             case 3: $title = 'Pangatlong markahan'; break;
-            case 4: $title = 'Ika apat na markahahn'; break;
+            case 4: $title = 'Ika-apat na Markahan'; break;
         }
 
         // FIX: Count total assessments in this level vs. how many the student PASSED

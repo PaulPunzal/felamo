@@ -135,8 +135,8 @@ if ($check_today_stmt->num_rows === 0) {
     $insert_stmt->close();
 
     if ($points > 0) {
-        $update_points_stmt = $conn->prepare("UPDATE users SET points = points + ? WHERE id = ?");
-        $update_points_stmt->bind_param("ii", $points, $user_id);
+        $update_points_stmt = $conn->prepare("UPDATE users SET points = points + ?, total_points = total_points + ? WHERE id = ?");
+        $update_points_stmt->bind_param("iii", $points, $points, $user_id);
         $update_points_stmt->execute();
         $update_points_stmt->close();
 

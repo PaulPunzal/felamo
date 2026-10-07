@@ -112,9 +112,10 @@ if (!$insert_success) {
 }
 
 $new_points = $user_points - $avatar_price;
-$update_stmt = $conn->prepare("UPDATE users SET points = ? WHERE id = ?");
-$update_stmt->bind_param("ii", $new_points, $user_id);
+$update_stmt = $conn->prepare("UPDATE users SET points = points - ? WHERE id = ? AND points >= ?");
+$update_stmt->bind_param("iii", $avatar_price, $user_id, $avatar_price);
 $update_stmt->execute();
+if ($update_stmt->affected_rows === 0)
 $update_stmt->close();
 
 echo json_encode([

@@ -87,7 +87,7 @@ if (!$existing) {
     $ins->execute();
 
     $points_awarded = 50;
-    $upd = $conn->prepare("UPDATE users SET points = points + 50 WHERE id = ?");
+    $upd = $conn->prepare("UPDATE users SET points = points + 50, total_points = total_points + 50 WHERE id = ?");
     $upd->bind_param("i", $user_id);
     $upd->execute();
 
