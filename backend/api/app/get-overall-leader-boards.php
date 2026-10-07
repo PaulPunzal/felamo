@@ -86,27 +86,57 @@ $section_stmt->bind_result($section_id);
 $section_stmt->fetch();
 $section_stmt->close();
 
-$query = "
-    SELECT u.id, u.first_name, u.last_name, u.total_points, u.points
+$limit  = max(1, min(50, (int)($input['limit'] ?? 13)));
+$offset = max(0, (int)($input['offset'] ?? 0));
+
+// Ranked list of the student's own section
+$base = "
+    SELECT u.id, u.first_name, u.last_name, u.total_points,
+           ROW_NUMBER() OVER (ORDER BY u.total_points DESC, u.id ASC) AS rnk
     FROM student_teacher_assignments AS sta
     JOIN users AS u ON sta.student_lrn = u.lrn
     WHERE sta.section_id = ?
-    ORDER BY u.total_points DESC, u.id ASC
 ";
 
-$stmt = $conn->prepare($query);
-$stmt->bind_param("i", $section_id);
+// 1. The requested page
+$stmt = $conn->prepare("SELECT * FROM ($base) AS ranked ORDER BY rnk ASC LIMIT ? OFFSET ?");
+$stmt->bind_param("iii", $section_id, $limit, $offset);
 $stmt->execute();
 $result = $stmt->get_result();
 
 $data = [];
 while ($row = $result->fetch_assoc()) {
-    $data[] = $row;
+    $data[] = [
+        'id'           => (int)$row['id'],
+        'first_name'   => $row['first_name'],
+        'last_name'    => $row['last_name'],
+        'total_points' => (int)$row['total_points'],
+        'rank'         => (int)$row['rnk'],
+    ];
 }
+$stmt->close();
+
+// 2. Total students in the section
+$cnt = $conn->prepare("SELECT COUNT(*) FROM ($base) AS ranked");
+$cnt->bind_param("i", $section_id);
+$cnt->execute();
+$cnt->bind_result($total);
+$cnt->fetch();
+$cnt->close();
+
+// 3. This student's own rank
+$me = $conn->prepare("SELECT rnk FROM ($base) AS ranked WHERE id = ?");
+$me->bind_param("ii", $section_id, $user_id);
+$me->execute();
+$me->bind_result($my_rank);
+$has_me = $me->fetch();
+$me->close();
 
 echo json_encode([
-    'status' => 'success',
-    'my_user_id' => (int)$user_id,
-    'data' => $data
+    'status'   => 'success',
+    'data'     => $data,
+    'total'    => (int)$total,
+    'has_more' => ($offset + count($data)) < (int)$total,
+    'my_rank'  => $has_me ? (int)$my_rank : null,
 ]);
 exit;
