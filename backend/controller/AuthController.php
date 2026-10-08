@@ -259,8 +259,8 @@ class AuthController extends db_connect
 
         if (!$user) {
             echo json_encode([
-                'status'  => 'success',
-                'message' => 'If that email is registered, an OTP has been sent.'
+                'status'  => 'error',
+                'message' => 'No account found with that email.'
             ]);
             return;
         }
@@ -270,7 +270,6 @@ class AuthController extends db_connect
         $userType = self::WEB_OTP_USER_TYPE;
         $otpType  = self::OTP_TYPE_FORGOT;
 
-        // Invalidate any previous OTPs for this email so only the newest works
         $del = $this->conn->prepare(
             "DELETE FROM user_otps WHERE email = ? AND user_type = ? AND otp_type = ?"
         );
@@ -381,8 +380,10 @@ class AuthController extends db_connect
         $u->close();
 
         if (!$user) {
-            session_write_close();
-            echo json_encode(['status' => 'error', 'message' => 'Account not found.']);
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'No account found with that email.'
+            ]);
             return;
         }
 

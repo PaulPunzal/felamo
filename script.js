@@ -52,29 +52,33 @@ $(document).ready(function () {
 
     const email = $("#email").val().trim();
     const $btn = $(this).find('button[type="submit"]');
+    const $err = $("#forgot-password-error");
 
-    $("#forgot-password-error").addClass("d-none");
+    $err.addClass("d-none");
     $btn.prop("disabled", true).text("Sending...");
+
+    // Safely read the first JSON object from the response
+    const parseFirstJson = (text) => {
+      try { return JSON.parse(text); } catch (e) {}
+      const match = (text || "").match(/^\s*\{[^{}]*\}/);
+      try { return match ? JSON.parse(match[0]) : null; } catch (e) { return null; }
+    };
 
     $.ajax({
       type: "POST",
       url: "backend/api/web/auth.php",
       data: { requestType: "SendOTP", email: email },
-      dataType: "json",
-      success: function (res) {
-        if (res.status === "success") {
+      dataType: "text",               // we parse it ourselves
+      complete: function (xhr) {
+        const res = parseFirstJson(xhr.responseText);
+
+        if (res && res.status === "success") {
           window.location.href = "login-using-otp.php?email=" + encodeURIComponent(email);
-        } else {
-          $("#forgot-password-error")
-            .text(res.message || "Something went wrong.")
-            .removeClass("d-none");
-          $btn.prop("disabled", false).text("Send OTP");
+          return;
         }
-      },
-      error: function (xhr) {
-        console.error("SendOTP error:", xhr.responseText);
-        $("#forgot-password-error")
-          .text("Server error. Please try again.")
+
+        $err
+          .text(res && res.message ? res.message : "Server error. Please try again.")
           .removeClass("d-none");
         $btn.prop("disabled", false).text("Send OTP");
       },
