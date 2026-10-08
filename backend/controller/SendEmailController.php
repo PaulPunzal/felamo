@@ -36,7 +36,7 @@ class SendEmailController
         $mail->Host       = app_env('MAIL_HOST', 'smtp.gmail.com');
         $mail->SMTPAuth   = true;
         $mail->Username   = app_env('MAIL_USERNAME');
-        $mail->Password   = app_env('MAIL_PASSWORD');
+        $mail->Password = str_replace(' ', '', app_env('MAIL_PASSWORD'));
         $mail->Port       = (int) app_env('MAIL_PORT', '465');
         $mail->SMTPSecure = 'ssl';
 
@@ -44,7 +44,9 @@ class SendEmailController
             app_env('MAIL_FROM_ADDRESS', $mail->Username),
             app_env('MAIL_FROM_NAME', 'Felamo')
         );
-
+        $mail->SMTPDebug = 2;
+        $mail->Debugoutput = 'error_log';
+        error_log('MAIL_USERNAME=[' . app_env('MAIL_USERNAME') . '] PASS_LEN=' . strlen(app_env('MAIL_PASSWORD')));
         return $mail;
     }
 

@@ -1,24 +1,35 @@
 <?php
-// DELETE THE ERROR LINES THAT WERE HERE (ini_set...)
-
 include_once(__DIR__ . '/../db/db.php');
 date_default_timezone_set('Asia/Manila');
 
 require_once __DIR__ . '/../PHPMailer/src/PHPMailer.php';
 require_once __DIR__ . '/../PHPMailer/src/SMTP.php';
 require_once __DIR__ . '/../PHPMailer/src/Exception.php';
+require_once __DIR__ . '/SendEmailController.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 class AuthController extends db_connect
 {
+    // user_type stored in user_otps for web accounts (mobile uses 'user')
+    private const WEB_OTP_USER_TYPE = 'web_user';
+    private const OTP_TYPE_FORGOT   = 'forgot_password';
+    private const OTP_MAX_ATTEMPTS  = 5;
+
     public function __construct()
     {
         $this->connect();
     }
 
-    // ... (Keep your GetUser functions as they are) ...
+    // Safe wrapper: ob_clean() throws a notice if no buffer is active
+    private function cleanBuffer()
+    {
+        if (ob_get_level() > 0) {
+            ob_clean();
+        }
+    }
+
     public function GetUser($id)
     {
         $q = $this->conn->prepare("SELECT * FROM `web_users` WHERE `id` = ? AND `is_active` = 1");
@@ -28,7 +39,12 @@ class AuthController extends db_connect
 
     public function GetUsingId($table, $id)
     {
-        // Safely fetch data from any table using its ID
+        // Whitelist tables since the name is interpolated into the query
+        $allowed = ['web_users', 'users', 'sections', 'levels', 'aralin', 'assessments'];
+        if (!in_array($table, $allowed, true)) {
+            return false;
+        }
+
         $q = $this->conn->prepare("SELECT * FROM `$table` WHERE `id` = ?");
         if ($q) {
             $q->bind_param("i", $id);
@@ -38,10 +54,10 @@ class AuthController extends db_connect
         }
         return false;
     }
-    
+
     public function GetUser2($id)
     {
-        ob_clean();
+        $this->cleanBuffer();
         $q = $this->conn->prepare(
             "SELECT * FROM `web_users` WHERE `id` = ? AND `is_active` = 1"
         );
@@ -49,13 +65,19 @@ class AuthController extends db_connect
         if ($q->execute()) {
             $result = $q->get_result();
             $user   = $result->fetch_assoc();
+
+            if (!$user) {
+                echo json_encode(['status' => 'error', 'message' => 'User not found.']);
+                return;
+            }
+
             echo json_encode([
                 'status' => 'success',
                 'data'   => [
                     'id'         => $user['id'],
-                    'first_name' => $user['first_name'],  
-                    'last_name'  => $user['last_name'],   
-                    'name'       => $user['first_name'] . ' ' . $user['last_name'], // backward compat
+                    'first_name' => $user['first_name'],
+                    'last_name'  => $user['last_name'],
+                    'name'       => $user['first_name'] . ' ' . $user['last_name'],
                     'email'      => $user['email'],
                     'role'       => $user['role'],
                 ]
@@ -65,7 +87,7 @@ class AuthController extends db_connect
 
     public function Login($data)
     {
-        ob_clean(); // Clean start
+        $this->cleanBuffer();
         $email = $data['email'];
         $password = $data['password'];
 
@@ -82,26 +104,26 @@ class AuthController extends db_connect
                 $_SESSION['id'] = $user['id'];
                 session_write_close();
 
-                ob_clean(); // Clean before output
+                $this->cleanBuffer();
                 echo json_encode([
                     'status' => 'success',
                     'message' => 'Logged in',
                     'user' => ['id' => $user['id'], 'email' => $user['email'], 'role' => $user['role']]
                 ]);
             } else {
-                ob_clean();
+                $this->cleanBuffer();
                 echo json_encode(['status' => 'error', 'message' => 'Invalid email or password.']);
             }
         } else {
-            ob_clean();
+            $this->cleanBuffer();
             echo json_encode(['status' => 'error', 'message' => 'Something went wrong.']);
         }
     }
 
-    // --- FIX 1: UPDATE PROFILE PICTURE ---
+    // --- UPDATE PROFILE PICTURE ---
     public function UpdateProfilePicture($id, $file)
     {
-        ob_clean(); // 1. Clean garbage output
+        $this->cleanBuffer();
 
         if ($file['error'] !== UPLOAD_ERR_OK) {
             echo json_encode(['status' => 'error', 'message' => 'File upload error code: ' . $file['error']]);
@@ -132,9 +154,9 @@ class AuthController extends db_connect
             if ($stmt) {
                 $stmt->bind_param("si", $dbPath, $id);
                 if ($stmt->execute()) {
-                    ob_clean(); // 2. Clean again before success
+                    $this->cleanBuffer();
                     echo json_encode([
-                        'status' => 'success', 
+                        'status' => 'success',
                         'message' => 'Profile picture updated.',
                         'new_path' => $dbPath
                     ]);
@@ -150,23 +172,21 @@ class AuthController extends db_connect
         }
     }
 
-    // --- FIX 2: UPDATE USER DETAILS ---
+    // --- UPDATE USER DETAILS ---
     public function UpdateUser($id, $first_name, $last_name, $email, $newPassword)
     {
-        ob_clean();
+        $this->cleanBuffer();
 
         if (!$this->conn) {
             echo json_encode(['status' => 'error', 'message' => 'Database connection failed.']);
             return;
         }
 
-        // 1. Format validation
         if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             echo json_encode(['status' => 'error', 'message' => 'Invalid email format.']);
             return;
         }
 
-        // 2. Check if email is already taken by ANOTHER user
         $checkEmail = $this->conn->prepare(
             "SELECT id FROM web_users WHERE email = ? AND id != ? LIMIT 1"
         );
@@ -182,7 +202,6 @@ class AuthController extends db_connect
         }
         $checkEmail->close();
 
-        // 3. Build update query
         if (!empty($newPassword)) {
             $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
             $stmt = $this->conn->prepare(
@@ -202,26 +221,187 @@ class AuthController extends db_connect
         }
 
         if ($stmt->execute()) {
-            ob_clean();
+            $this->cleanBuffer();
             echo json_encode(['status' => 'success', 'message' => 'User updated successfully.']);
         } else {
-            ob_clean();
+            $this->cleanBuffer();
             echo json_encode(['status' => 'error', 'message' => 'Update failed: ' . $stmt->error]);
         }
         $stmt->close();
     }
-    
-    // ... (Keep the rest of your functions like OTP, Sections, etc.) ...
-     public function SendForGotPasswordOtp($email) {
-         // ... Keep your existing code ...
-         // Just ensure you add ob_clean() at the start if it has issues too
-         ob_clean(); 
-         // ... rest of code
-     }
-     
-     // ... (Keep CheckAvailableOTP and LoginUsingOtp) ...
-      public function LoginUsingOtp($email, $otp) {
-          // ... Keep existing code ...
-          // Make sure to remove ini_set here too if you copied it previously
-      }
+
+    // =====================================================================
+    // FORGOT PASSWORD / LOGIN USING OTP  (web_users)
+    // =====================================================================
+
+    /**
+     * Step 1: generate an OTP, store it in user_otps, and email it.
+     * Always returns the same success message for unknown emails so the
+     * endpoint can't be used to discover which emails are registered.
+     */
+    public function SendForGotPasswordOtp($email)
+    {
+        $this->cleanBuffer();
+        $email = trim($email);
+
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            echo json_encode(['status' => 'error', 'message' => 'Please enter a valid email.']);
+            return;
+        }
+
+        $q = $this->conn->prepare(
+            "SELECT id, first_name, last_name FROM `web_users` WHERE `email` = ? AND `is_active` = 1"
+        );
+        $q->bind_param("s", $email);
+        $q->execute();
+        $user = $q->get_result()->fetch_assoc();
+        $q->close();
+
+        if (!$user) {
+            echo json_encode([
+                'status'  => 'success',
+                'message' => 'If that email is registered, an OTP has been sent.'
+            ]);
+            return;
+        }
+
+        $otp      = (string) random_int(100000, 999999);
+        $expires  = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+        $userType = self::WEB_OTP_USER_TYPE;
+        $otpType  = self::OTP_TYPE_FORGOT;
+
+        // Invalidate any previous OTPs for this email so only the newest works
+        $del = $this->conn->prepare(
+            "DELETE FROM user_otps WHERE email = ? AND user_type = ? AND otp_type = ?"
+        );
+        $del->bind_param("sss", $email, $userType, $otpType);
+        $del->execute();
+        $del->close();
+
+        $ins = $this->conn->prepare(
+            "INSERT INTO user_otps (email, user_type, otp_type, otp, expiration_date) VALUES (?, ?, ?, ?, ?)"
+        );
+        $ins->bind_param("sssss", $email, $userType, $otpType, $otp, $expires);
+
+        if (!$ins->execute()) {
+            echo json_encode(['status' => 'error', 'message' => 'Could not generate OTP. Please try again.']);
+            return;
+        }
+        $ins->close();
+
+        $mailer = new SendEmailController();
+        $sent = $mailer->SendForgotPasswordCode($email, $otp, $user['first_name'], $user['last_name']);
+
+        $this->cleanBuffer();
+        if ($sent === "200") {
+            echo json_encode(['status' => 'success', 'message' => 'OTP sent to your email.']);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Failed to send the email. Please try again.']);
+        }
+    }
+
+    /**
+     * Used by login-using-otp.php to make sure there's a live OTP
+     * for this email before showing the form.
+     */
+    public function CheckAvailableOTP($email)
+    {
+        $now      = date('Y-m-d H:i:s');
+        $userType = self::WEB_OTP_USER_TYPE;
+        $otpType  = self::OTP_TYPE_FORGOT;
+
+        $q = $this->conn->prepare("
+            SELECT id FROM user_otps
+            WHERE email = ? AND user_type = ? AND otp_type = ?
+              AND expiration_date >= ?
+            LIMIT 1
+        ");
+        $q->bind_param("ssss", $email, $userType, $otpType, $now);
+        $q->execute();
+        $q->store_result();
+        $found = $q->num_rows > 0;
+        $q->close();
+
+        return $found;
+    }
+
+    /**
+     * Step 2: verify the OTP and, if valid, log the user in.
+     */
+    public function LoginUsingOtp($email, $otp)
+    {
+        $this->cleanBuffer();
+
+        if (session_status() === PHP_SESSION_NONE) {
+            session_set_cookie_params(0, '/');
+            session_start();
+        }
+
+        // Basic brute-force guard for the 6-digit code
+        $_SESSION['otp_attempts'] = ($_SESSION['otp_attempts'] ?? 0) + 1;
+        if ($_SESSION['otp_attempts'] > self::OTP_MAX_ATTEMPTS) {
+            session_write_close();
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Too many attempts. Please request a new OTP.'
+            ]);
+            return;
+        }
+
+        $email    = trim($email);
+        $otp      = trim($otp);
+        $now      = date('Y-m-d H:i:s');
+        $userType = self::WEB_OTP_USER_TYPE;
+        $otpType  = self::OTP_TYPE_FORGOT;
+
+        $q = $this->conn->prepare("
+            SELECT id, otp FROM user_otps
+            WHERE email = ? AND user_type = ? AND otp_type = ?
+              AND expiration_date >= ?
+            ORDER BY expiration_date DESC
+            LIMIT 1
+        ");
+        $q->bind_param("ssss", $email, $userType, $otpType, $now);
+        $q->execute();
+        $otpRow = $q->get_result()->fetch_assoc();
+        $q->close();
+
+        if (!$otpRow || !hash_equals((string)$otpRow['otp'], $otp)) {
+            session_write_close();
+            echo json_encode(['status' => 'error', 'message' => 'Invalid or expired OTP.']);
+            return;
+        }
+
+        $u = $this->conn->prepare(
+            "SELECT id, email, role FROM `web_users` WHERE `email` = ? AND `is_active` = 1"
+        );
+        $u->bind_param("s", $email);
+        $u->execute();
+        $user = $u->get_result()->fetch_assoc();
+        $u->close();
+
+        if (!$user) {
+            session_write_close();
+            echo json_encode(['status' => 'error', 'message' => 'Account not found.']);
+            return;
+        }
+
+        // OTP is one-time use
+        $d = $this->conn->prepare("DELETE FROM user_otps WHERE id = ?");
+        $d->bind_param("i", $otpRow['id']);
+        $d->execute();
+        $d->close();
+
+        session_regenerate_id(true);
+        $_SESSION['id'] = $user['id'];
+        unset($_SESSION['otp_attempts']);
+        session_write_close();
+
+        $this->cleanBuffer();
+        echo json_encode([
+            'status'  => 'success',
+            'message' => 'Logged in',
+            'user'    => ['id' => $user['id'], 'email' => $user['email'], 'role' => $user['role']]
+        ]);
+    }
 }
