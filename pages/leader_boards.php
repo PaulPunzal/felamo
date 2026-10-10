@@ -41,9 +41,8 @@ $sections = $sectionController->GetSectionsResult($auth_user_id);
     }
     
     .header-left { display: flex; align-items: center; gap: 15px; }
-    .page-header-banner h4 { margin: 0; font-weight: 700; text-transform: uppercase; font-size: 1.5rem; line-height: 1; }
+    .page-header-banner h4 { margin: 0; font-weight: 700; text-transform: uppercase; font-size: 1.5rem; line-height: 1; color: #ffffff; }
 
-    /* Header Dropdown */
     .header-right .input-group-text { background-color: rgba(255,255,255,0.9); color: #a71b1b; border: none; }
     .header-right .form-select { border: none; cursor: pointer; color: #333; }
     .header-right .form-select:focus { box-shadow: none; outline: none; }

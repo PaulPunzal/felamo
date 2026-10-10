@@ -127,6 +127,10 @@ if ($level_id) {
         gap: 15px;
     }
 
+    .header-left h4 {
+        color: white;
+    }
+
     /* --- ROUND BACK BUTTON (Matches create_assessment.php) --- */
     .btn-back-text {
         background-color: rgba(255, 255, 255, 0.2);
@@ -173,6 +177,11 @@ if ($level_id) {
         transition: all 0.2s;
     }
     .btn-header-action:hover { background-color: #f0f0f0; transform: translateY(-2px); }
+
+    .modal-header .modal-title,
+    .modal-header .modal-title i {
+        color: white;
+    }
 
     /* --- 4. TABLE STYLES --- */
     .table-container {

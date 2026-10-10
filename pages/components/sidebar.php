@@ -129,6 +129,13 @@ if (!empty($user['profile_picture'])) {
         background-color: white;
     }
 
+        /* --- SIDEBAR PROFILE NAME: ALWAYS WHITE --- */
+    .sidebar-profile h5,
+    .sidebar-profile a,
+    .sidebar-profile a:hover {
+        color: #ffffff !important;
+    }
+
     /* --- THE TOGGLE BUTTON --- */
     .sidebar-toggle { 
         position: fixed !important; 

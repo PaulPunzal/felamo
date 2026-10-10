@@ -65,9 +65,9 @@ include("components/header.php");
     .logout-btn:hover { background-color: #e0a800; }
 
     /* --- 3. PAGE SPECIFIC STYLES (Red Header & List) --- */
-    .page-header-banner {
+        .page-header-banner {
         background: linear-gradient(90deg, #a71b1b 0%, #880f0b 100%);
-        color: white;
+        color: #ffffff;
         padding: 15px 25px;
         border-radius: 8px;
         margin-bottom: 25px;
@@ -77,6 +77,10 @@ include("components/header.php");
         font-size: 1.5rem;
         font-weight: 700;
         text-transform: uppercase;
+    }
+    .page-header-banner h4,
+    .page-header-banner i {
+        color: #ffffff;
     }
     .page-header-banner i { margin-right: 15px; font-size: 1.8rem; }
 

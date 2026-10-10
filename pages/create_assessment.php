@@ -65,8 +65,12 @@ if ($aralin_id) {
         box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between;
         font-size: 1.5rem; font-weight: 700; text-transform: uppercase;
     }
-    .header-text { display: flex; align-items: center; }
+    .header-text { display: flex; align-items: center; color: white; }
     .header-text i { margin-right: 15px; font-size: 1.8rem; }
+    .header-left h4,
+    .header-left {
+        color: white;
+    }
     
     /* Back Button Style */
     .btn-back-text {

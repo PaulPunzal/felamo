@@ -23,12 +23,16 @@ include("components/header.php");
     .logout-btn { margin-top: auto; background-color: #FFC107; color: black; font-weight: bold; border: none; width: 100%; padding: 12px; border-radius: 25px; text-align: center; cursor: pointer; }
 
     /* --- HEADER BANNER --- */
-    .page-header-banner {
-        background: linear-gradient(90deg, #a71b1b 0%, #880f0b 100%);
-        color: white; padding: 15px 25px; border-radius: 8px; margin-bottom: 25px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between;
-        font-size: 1.5rem; font-weight: 700; text-transform: uppercase;
-    }
+    .page-header-banner h4,
+.page-header-banner .header-text {
+  margin: 0;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 1.4rem;
+  line-height: 1;
+  letter-spacing: 0.5px;
+  color: var(--color-white);
+}
     
     .btn-back-text {
         background-color: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.5);

@@ -56,6 +56,7 @@ $sections = $sectionController->GetSectionsResult($auth_user_id);
     .page-header-banner h4 {
         margin: 0; font-weight: 700; text-transform: uppercase;
         font-size: 1.5rem; line-height: 1;
+        color: #ffffff;
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
@@ -86,7 +87,8 @@ $sections = $sectionController->GetSectionsResult($auth_user_id);
 
     /* --- MODAL STYLES --- */
     .modal-header-custom { background: linear-gradient(90deg, #a71b1b 0%, #880f0b 100%); color: white; padding: 15px 20px; }
-    .modal-title { font-weight: 700; letter-spacing: 0.5px; }
+    .modal-title { font-weight: 700; letter-spacing: 0.5px; color: white; }
+    .modal-title i { color: white; }
     .btn-main { background-color: #a71b1b; color: white; border: none; }
     .btn-main:hover { background-color: #880f0b; color: white; }
 

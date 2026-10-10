@@ -79,7 +79,16 @@ body             { background-color: #f4f6f9; overflow-x: hidden; }
     box-shadow: 0 4px 6px rgba(0,0,0,.1);
     display: flex; align-items: center; justify-content: space-between;
 }
-.page-header-banner h4 { margin:0; font-weight:700; text-transform:uppercase; font-size:1.3rem; }
+.page-header-banner h4 {
+    margin: 0;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 1.3rem;
+    color: white;
+}
+.page-header-banner .header-meta {
+    color: white;
+}
 .btn-back-text {
     background:rgba(255,255,255,.2); color:white; border:1px solid rgba(255,255,255,.4);
     font-size:.85rem; font-weight:600; padding:8px 18px; border-radius:50px; text-decoration:none;
@@ -232,7 +241,7 @@ body             { background-color: #f4f6f9; overflow-x: hidden; }
                     <h4 class="m-0">
                         Item Analysis &mdash; <?= htmlspecialchars($hdr['assessment_title']) ?>
                     </h4>
-                    <div style="font-size:.8rem;opacity:.8;margin-top:3px;">
+                    <div class="header-meta" style="font-size:.8rem;opacity:.8;margin-top:3px;">
                         Aralin <?= (int)$hdr['aralin_no'] ?>:
                         <?= htmlspecialchars($hdr['aralin_title']) ?>
                         &bull; <?= htmlspecialchars($markahan) ?>

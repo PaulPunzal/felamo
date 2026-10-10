@@ -59,6 +59,9 @@ if ($level_id) {
         box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between;
         font-size: 1.5rem; font-weight: 700; text-transform: uppercase;
     }
+    .header-left h4 {
+        color: white;
+    }
     .btn-back-text {
         background-color: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.5);
         font-size: 0.9rem; font-weight: 600; padding: 8px 20px; border-radius: 50px; text-decoration: none;
