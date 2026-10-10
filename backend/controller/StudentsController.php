@@ -88,6 +88,10 @@ class StudentsController extends db_connect
             return ['status' => 'error', 'message' => "LRN must be exactly 12 digits. Got '$lrn' (" . strlen($lrn) . " chars)."];
         }
 
+        if (preg_match('/[^0-9]/', $lrn)) {
+            return ['status' => 'error', 'message' => "LRN must contain digits only (no letters or special characters). Got '$lrn'."];
+        }
+
         // 1. Get Teacher ID
         $qSection = $this->conn->prepare("SELECT teacher_id FROM sections WHERE id = ?");
         $qSection->bind_param("i", $sectionId);

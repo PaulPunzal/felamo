@@ -116,6 +116,8 @@ while (($row = fgetcsv($handle)) !== false) {
     if (strpos($lrn, '__SCI_NOTATION__') === 0) {
         $rowErrors[] = "LRN was corrupted by Excel into scientific notation ($row[0]) — the original digits are lost. "
                     . "Reformat the LRN column as Text in Excel, re-enter the value, and re-export the CSV.";
+    } elseif (preg_match('/[^0-9]/', $lrn)) {
+        $rowErrors[] = "LRN must contain digits only (no letters or special characters). Got: '$lrn'.";
     } elseif (empty($lrn) || !preg_match('/^\d{12}$/', $lrn)) {
         $rowErrors[] = "LRN must be exactly 12 digits. Got: '$lrn' (" . strlen($lrn) . " chars).";
     }

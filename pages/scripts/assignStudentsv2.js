@@ -1,10 +1,14 @@
 $(document).on("input", "#assign_lrn", function () {
-    if (/^\d{12}$/.test($(this).val().trim())) {
+    // Strip anything that isn't a digit (handles typing AND pasting), max 12
+    const cleaned = this.value.replace(/\D/g, "").slice(0, 12);
+    if (this.value !== cleaned) this.value = cleaned;
+
+    if (/^\d{12}$/.test(cleaned)) {
         $(this).removeClass("is-invalid");
     }
 });
 
-$(document).ready(function() {
+$(document).ready(function() {  
     
     // --- HELPER: SHOW ALERT ---
     const showAlert = (type, message) => {
