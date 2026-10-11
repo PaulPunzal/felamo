@@ -22,24 +22,19 @@ class LeaderBoardsController extends db_connect
     public function GetLeaderBoards($teacher_id, $section_id = null)
     {
         // Prevent random PHP warnings from breaking the JSON layout
-        ob_clean(); 
+        if (ob_get_level() > 0) {
+            ob_clean();
+        }
 
         if (!empty($section_id)) {
-            // Using LEFT JOIN so students with no assessment takes still appear
+            // Single section: rank by total_points (same as the mobile app)
             $query = "
-            SELECT 
-                u.*,
-                COALESCE(SUM(at.points), 0) AS total_points
-            FROM users AS u
-            JOIN student_teacher_assignments AS sta ON u.lrn = sta.student_lrn
-            JOIN sections AS s ON sta.section_id = s.id
-            LEFT JOIN levels AS l ON s.teacher_id = l.teacher_id
-            LEFT JOIN aralin AS ar ON ar.level_id = l.id
-            LEFT JOIN assessments AS a ON a.aralin_id = ar.id
-            LEFT JOIN assessment_results AS at ON a.id = at.assessment_id AND at.lrn = u.lrn AND at.is_completed = 1
+            SELECT u.*
+            FROM `users` AS u
+            JOIN `student_teacher_assignments` AS sta ON u.lrn = sta.student_lrn
+            JOIN `sections` AS s ON sta.section_id = s.id
             WHERE s.teacher_id = ? AND s.id = ?
-            GROUP BY u.id
-            ORDER BY total_points DESC, u.points DESC
+            ORDER BY u.total_points DESC, u.id ASC
             ";
 
             $q = $this->conn->prepare($query);
@@ -54,14 +49,14 @@ class LeaderBoardsController extends db_connect
 
             $q->bind_param("ii", $teacher_id, $section_id);
         } else {
-            // All sections query
+            // All sections: rank by total_points
             $query = "
             SELECT u.*
             FROM `users` AS u
             JOIN `student_teacher_assignments` AS sta ON u.lrn = sta.student_lrn
-            JOIN `sections` AS s ON sta.section_id = s.id 
+            JOIN `sections` AS s ON sta.section_id = s.id
             WHERE s.teacher_id = ?
-            ORDER BY u.points DESC";
+            ORDER BY u.total_points DESC, u.id ASC";
 
             $q = $this->conn->prepare($query);
 
@@ -81,6 +76,8 @@ class LeaderBoardsController extends db_connect
             $leaderBoards = [];
 
             while ($row = $result->fetch_assoc()) {
+                // Never send the password hash to the browser
+                unset($row['password']);
                 $leaderBoards[] = $row;
             }
 
