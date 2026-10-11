@@ -186,12 +186,12 @@ if ($level_id) {
         <!-- Filter bar -->
         <div class="filter-bar">
             <div class="filter-group">
-                <label><i class="bi bi-card-checklist me-1"></i>Assessment Title</label>
-                <input type="text" id="filter-title" class="form-control" placeholder="Search title...">
-            </div>
-            <div class="filter-group">
                 <label><i class="bi bi-person me-1"></i>Student Name</label>
                 <input type="text" id="filter-student" class="form-control" placeholder="Search name...">
+            </div>
+            <div class="filter-group">
+                <label><i class="bi bi-card-checklist me-1"></i>Assessment Title</label>
+                <input type="text" id="filter-title" class="form-control" placeholder="Search title...">
             </div>
             <div class="filter-group">
                 <label><i class="bi bi-people me-1"></i>Section</label>
@@ -216,8 +216,8 @@ if ($level_id) {
                 <table class="table custom-table">
                     <thead>
                         <tr>
-                            <th style="width: 25%;">Assessment Title</th>
                             <th style="width: 20%;">Student Name</th>
+                            <th style="width: 25%;">Assessment Title</th>
                             <th style="width: 15%;">Section</th>
                             <th style="width: 13%;">Date Taken</th>
                             <th style="width: 15%;">Score</th>
@@ -345,8 +345,8 @@ $(document).ready(function () {
                     data-section="${escapeHtml(sectionName.toLowerCase())}"
                     data-date="${item.created_at ? item.created_at.substring(0, 10) : ''}"
                     data-pct="${pct}">
-                    <td class="fw-semibold">${escapeHtml(title)}</td>
                     <td>${escapeHtml(studentName)}</td>
+                    <td class="fw-semibold">${escapeHtml(title)}</td>
                     <td><span class="badge bg-secondary">${escapeHtml(sectionName)}</span></td>
                     <td class="text-date">${dateTaken}</td>
                     <td>
