@@ -126,7 +126,17 @@ class AuthController extends db_connect
         $this->cleanBuffer();
 
         if ($file['error'] !== UPLOAD_ERR_OK) {
-            echo json_encode(['status' => 'error', 'message' => 'File upload error code: ' . $file['error']]);
+            $uploadErrors = [
+                UPLOAD_ERR_INI_SIZE   => 'The photo is too large for the server (limit: ' . ini_get('upload_max_filesize') . '). Please choose a smaller image.',
+                UPLOAD_ERR_FORM_SIZE  => 'The photo is too large.',
+                UPLOAD_ERR_PARTIAL    => 'The photo was only partially uploaded. Please try again.',
+                UPLOAD_ERR_NO_FILE    => 'No file was uploaded.',
+                UPLOAD_ERR_NO_TMP_DIR => 'Server error: missing temporary folder.',
+                UPLOAD_ERR_CANT_WRITE => 'Server error: failed to write file to disk.',
+                UPLOAD_ERR_EXTENSION  => 'Upload blocked by a PHP extension.',
+            ];
+            $msg = $uploadErrors[$file['error']] ?? ('File upload error code: ' . $file['error']);
+            echo json_encode(['status' => 'error', 'message' => $msg]);
             return;
         }
 

@@ -250,11 +250,20 @@ $currentUserId = isset($user['id']) ? $user['id'] : (isset($auth_user_id) ? $aut
         if(profileUpload) {
             profileUpload.addEventListener('change', function() {
                 if (this.files && this.files[0]) {
+                    const MAX_MB = 2; // keep this at or below your PHP upload_max_filesize
+                    if (this.files[0].size > MAX_MB * 1024 * 1024) {
+                        Swal.fire('File too large', 'Please choose an image smaller than ' + MAX_MB + 'MB.', 'error');
+                        this.value = "";
+                        selectedFile = null;
+                        $(btnSavePhoto).hide();
+                        return;
+                    }
+
                     selectedFile = this.files[0];
                     const reader = new FileReader();
                     reader.onload = function(e) {
                         profilePreview.src = e.target.result;
-                        $(btnSavePhoto).fadeIn(); 
+                        $(btnSavePhoto).fadeIn();
                     }
                     reader.readAsDataURL(this.files[0]);
                 }
