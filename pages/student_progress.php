@@ -491,7 +491,7 @@ const preparedBy = <?= json_encode(trim(($user['first_name'] ?? '') . ' ' . ($us
                             const vStat = lesson.video_watched_date ? `<span class="text-success fw-bold"><i class="bi bi-check"></i> Watched</span>` : `<span class="text-secondary">Not Started</span>`;
                             let qStat = `<span class="text-secondary">Not Taken</span>`;
                             if (lesson.points !== null) {
-                                const c = (lesson.points / lesson.total) * 100 >= 75 ? 'text-success' : 'text-danger';
+                                const c = (lesson.points / lesson.total) * 100 >= 50 ? 'text-success' : 'text-danger';
                                 qStat = `<span class="${c} fw-bold">${lesson.points}/${lesson.total}</span>`;
                             }
                             html += `<tr><td><strong>Aralin ${lesson.aralin_no}:</strong> ${lesson.aralin_title}</td><td>${vStat}</td><td>${qStat}</td></tr>`;
