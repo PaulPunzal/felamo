@@ -345,8 +345,8 @@ $(document).ready(function () {
                     data-section="${escapeHtml(sectionName.toLowerCase())}"
                     data-date="${item.created_at ? item.created_at.substring(0, 10) : ''}"
                     data-pct="${pct}">
-                    <td>${escapeHtml(studentName)}</td>
-                    <td class="fw-semibold">${escapeHtml(title)}</td>
+                    <td class="fw-semibold">${escapeHtml(studentName)}</td>
+                    <td>${escapeHtml(title)}</td>
                     <td><span class="badge bg-secondary">${escapeHtml(sectionName)}</span></td>
                     <td class="text-date">${dateTaken}</td>
                     <td>
