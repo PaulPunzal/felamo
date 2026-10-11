@@ -258,7 +258,7 @@ $isSuperAdmin = isset($user['role']) && $user['role'] === 'super_admin';
 </div>
 
 <?php include("components/footer-scripts.php"); ?>
-<script src="scripts/assignStudentsv2.js?v=4"></script>
+<script src="scripts/assignStudentsv2.js?v=<?= filemtime(__DIR__ . '/scripts/assignStudentsv2.js') ?>"></script>
 <script>
     // --- ADD SIDEBAR TOGGLE LOGIC HERE TO ENSURE IT WORKS ---
     $(document).ready(function() {
