@@ -285,7 +285,7 @@ foreach ($students as $s) {
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header text-white" style="background: linear-gradient(180deg, #a71b1b 0%, #880f0b 100%);">
-                <h5 class="modal-title" id="modalStudentName">Student Progress Details</h5>
+                <h5 class="modal-title" id="modalStudentName" style="color: white;">Student Progress Details</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" id="modalProgressBody">

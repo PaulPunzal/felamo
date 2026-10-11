@@ -461,7 +461,7 @@ $printReportHtml = ob_get_clean();
                 <a href="taken_assessments.php?level=<?= htmlspecialchars($result['level_id']) ?>" class="btn-back-text">
                     <i class="bi bi-arrow-left"></i> BACK
                 </a>
-                <h4 class="m-0 fw-bold text-uppercase" style="font-size:1.3rem;">
+                <h4 class="m-0 fw-bold text-uppercase" style="font-size:1.3rem; color: white;">
                     Result &mdash; <?= htmlspecialchars($result['assessment_title']) ?>
                 </h4>
             </div>
