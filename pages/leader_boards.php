@@ -120,6 +120,7 @@ $sections = $sectionController->GetSectionsResult($auth_user_id);
                             <th style="width: 25%;"><i class="bi bi-person me-1"></i>First Name</th>
                             <th style="width: 20%;"><i class="bi bi-person me-1"></i>Middle Name</th>
                             <th style="width: 25%;"><i class="bi bi-person me-1"></i>Last Name</th>
+                            <th style="width: 20%;" class="text-end"><i class="bi bi-star-fill me-1"></i>Total Points</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -191,6 +192,8 @@ $sections = $sectionController->GetSectionsResult($auth_user_id);
                                     else if(rank === 2) { rankClass = "rank-2"; rankIcon = `2nd`; }
                                     else if(rank === 3) { rankClass = "rank-3"; rankIcon = `3rd`; }
 
+                                    const totalPoints = parseInt(student.total_points) || 0;
+
                                     rows += `
                                         <tr>
                                             <td class="${rankClass}">${rankIcon}</td>
@@ -198,7 +201,9 @@ $sections = $sectionController->GetSectionsResult($auth_user_id);
                                             <td>${student.first_name || ""}</td>
                                             <td>${student.middle_name || ""}</td>
                                             <td>${student.last_name || ""}</td>
-                                            <td></td>
+                                            <td class="text-end fw-bold" style="color: #a71b1b;">
+                                                <i class="bi bi-star-fill me-1" style="color: #FFC107;"></i>${totalPoints.toLocaleString()}
+                                            </td>
                                         </tr>
                                     `;
                                 });
