@@ -156,7 +156,7 @@ $typeLabels = [
 
 $diffLabels = [
     'easy'   => 'Easy',
-    'medium' => 'Avg',
+    'medium' => 'Average',
     'hard'   => 'Difficult',
 ];
 

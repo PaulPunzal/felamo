@@ -1,4 +1,4 @@
-const DIFF_LABELS = { easy: 'Easy', medium: 'Avg', hard: 'Difficult' };
+const DIFF_LABELS = { easy: 'Easy', medium: 'Average', hard: 'Difficult' };
 let questionsList = []; // Array to store questions temporarily
 let editingIndex = -1;  // Tracks which question is currently being edited (-1 means creating new)
 

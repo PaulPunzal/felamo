@@ -266,7 +266,7 @@ body             { background-color: #f4f6f9; overflow-x: hidden; }
             </div>
             <div class="summary-card green">
                 <div class="val" id="stat-avg">—</div>
-                <div class="lbl">Avg % Correct</div>
+                <div class="lbl">Average % Correct</div>
             </div>
             <div class="summary-card red">
                 <div class="val" id="stat-hard">—</div>
@@ -291,7 +291,7 @@ body             { background-color: #f4f6f9; overflow-x: hidden; }
                 <select id="filter-diff" class="form-select form-select-sm">
                     <option value="all">All Levels</option>
                     <option value="easy">Easy</option>
-                    <option value="medium">Avg</option>
+                    <option value="medium">Average</option>
                     <option value="hard">Difficult</option>
                 </select>
             </div>
@@ -330,7 +330,7 @@ body             { background-color: #f4f6f9; overflow-x: hidden; }
 <?php include("components/footer-scripts.php"); ?>
 <script>
 
-const DIFF_LABELS = { easy: 'Easy', medium: 'Avg', hard: 'Difficult' };
+const DIFF_LABELS = { easy: 'Easy', medium: 'Average', hard: 'Difficult' };
 $(document).ready(function () {
 
     // ── Sidebar toggle ──────────────────────────────────────────────────
@@ -654,7 +654,7 @@ $(document).ready(function () {
                     <td>${summaryStats.total_questions}</td>
                 </tr>
                 <tr>
-                    <td class="label">Avg % Correct</td>
+                    <td class="label">Average % Correct</td>
                     <td>${summaryStats.avg_percent_correct}%</td>
                     <td class="label">Difficult Items (&lt;50%)</td>
                     <td>${summaryStats.hard_count}</td>
