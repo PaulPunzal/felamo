@@ -50,21 +50,6 @@ $session_stmt->bind_result($user_id);
 $session_stmt->fetch();
 $session_stmt->close();
 
-$owned_stmt = $conn->prepare("SELECT 1 FROM user_avatars WHERE avatar_id = ? AND user_id = ?");
-$owned_stmt->bind_param("ii", $avatar_id, $user_id);
-$owned_stmt->execute();
-$owned_stmt->store_result();
-
-if ($owned_stmt->num_rows > 0) {
-    http_response_code(409);
-    echo json_encode([
-        'status' => 409,
-        'message' => 'You already own this avatar.'
-    ]);
-    exit;
-}
-$owned_stmt->close();
-
 $avatar_stmt = $conn->prepare("SELECT price FROM avatars WHERE id = ?");
 $avatar_stmt->bind_param("i", $avatar_id);
 $avatar_stmt->execute();
@@ -115,8 +100,12 @@ $new_owned_json = json_encode(array_values(array_unique($owned_ids)));
 
 $conn->begin_transaction();
 
-$update_stmt = $conn->prepare("UPDATE users SET points = points - ?, owned_avatars = ? WHERE id = ? AND points >= ?");
-$update_stmt->bind_param("isii", $avatar_price, $new_owned_json, $user_id, $avatar_price);
+$update_stmt = $conn->prepare(
+    "UPDATE users 
+     SET points = points - ?, owned_avatars = ? 
+     WHERE id = ? AND points >= ? AND owned_avatars = ?"
+);
+$update_stmt->bind_param("isiis", $avatar_price, $new_owned_json, $user_id, $avatar_price, $owned_json);
 $ok = $update_stmt->execute();
 $affected = $update_stmt->affected_rows;
 $update_stmt->close();
