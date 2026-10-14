@@ -80,13 +80,26 @@ if ($avatar_price === null) {
     ]);
     exit;
 }
+$avatar_price = (int)$avatar_price;
 
-$user_stmt = $conn->prepare("SELECT points FROM users WHERE id = ?");
+$user_stmt = $conn->prepare("SELECT points, owned_avatars FROM users WHERE id = ?");
 $user_stmt->bind_param("i", $user_id);
 $user_stmt->execute();
-$user_stmt->bind_result($user_points);
+$user_stmt->bind_result($user_points, $owned_json);
 $user_stmt->fetch();
 $user_stmt->close();
+
+$user_points = (int)$user_points;
+$owned_ids = array_map('intval', json_decode($owned_json ?: '[]', true) ?: []);
+
+if (in_array((int)$avatar_id, $owned_ids, true)) {
+    http_response_code(409);
+    echo json_encode([
+        'status' => 409,
+        'message' => 'You already own this avatar.'
+    ]);
+    exit;
+}
 
 if ($user_points < $avatar_price) {
     http_response_code(403);
@@ -97,12 +110,19 @@ if ($user_points < $avatar_price) {
     exit;
 }
 
-$insert_stmt = $conn->prepare("INSERT INTO user_avatars (user_id, avatar_id) VALUES (?, ?)");
-$insert_stmt->bind_param("ii", $user_id, $avatar_id);
-$insert_success = $insert_stmt->execute();
-$insert_stmt->close();
+$owned_ids[] = (int)$avatar_id;
+$new_owned_json = json_encode(array_values(array_unique($owned_ids)));
 
-if (!$insert_success) {
+$conn->begin_transaction();
+
+$update_stmt = $conn->prepare("UPDATE users SET points = points - ?, owned_avatars = ? WHERE id = ? AND points >= ?");
+$update_stmt->bind_param("isii", $avatar_price, $new_owned_json, $user_id, $avatar_price);
+$ok = $update_stmt->execute();
+$affected = $update_stmt->affected_rows;
+$update_stmt->close();
+
+if (!$ok || $affected === 0) {
+    $conn->rollback();
     http_response_code(500);
     echo json_encode([
         'status' => 500,
@@ -111,16 +131,11 @@ if (!$insert_success) {
     exit;
 }
 
-$new_points = $user_points - $avatar_price;
-$update_stmt = $conn->prepare("UPDATE users SET points = points - ? WHERE id = ? AND points >= ?");
-$update_stmt->bind_param("iii", $avatar_price, $user_id, $avatar_price);
-$update_stmt->execute();
-if ($update_stmt->affected_rows === 0)
-$update_stmt->close();
+$conn->commit();
 
 echo json_encode([
     'status' => 'success',
     'message' => 'Avatar purchased successfully.',
-    'remaining_points' => $new_points
+    'remaining_points' => $user_points - $avatar_price
 ]);
 exit;

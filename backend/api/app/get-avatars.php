@@ -50,12 +50,15 @@ $session_stmt->fetch();
 $session_stmt->close();
 
 $current_avatar_id = null;
-$user_stmt = $conn->prepare("SELECT avatar FROM users WHERE id = ?");
+$owned_json = '[]';
+$user_stmt = $conn->prepare("SELECT avatar, owned_avatars FROM users WHERE id = ?");
 $user_stmt->bind_param("i", $user_id);
 $user_stmt->execute();
-$user_stmt->bind_result($current_avatar_id);
+$user_stmt->bind_result($current_avatar_id, $owned_json);
 $user_stmt->fetch();
 $user_stmt->close();
+
+$owned_ids = array_map('intval', json_decode($owned_json ?: '[]', true) ?: []);
 
 $avatar_stmt = $conn->prepare("SELECT * FROM avatars");
 $avatar_stmt->execute();
@@ -64,20 +67,8 @@ $avatar_result = $avatar_stmt->get_result();
 $avatars = [];
 
 while ($row = $avatar_result->fetch_assoc()) {
-    $avatar_id = $row['id'];
-
-    $check_stmt = $conn->prepare("SELECT 1 FROM user_avatars WHERE avatar_id = ? AND user_id = ? LIMIT 1");
-    $check_stmt->bind_param("ii", $avatar_id, $user_id);
-    $check_stmt->execute();
-    $check_stmt->store_result();
-    $owned = $check_stmt->num_rows > 0;
-    $check_stmt->close();
-
-    $is_using = ($current_avatar_id == $avatar_id);
-
-    $row['owned'] = $owned;
-    $row['is_using'] = $is_using;
-
+    $row['owned'] = in_array((int)$row['id'], $owned_ids, true);
+    $row['is_using'] = ($current_avatar_id == $row['id']);
     $avatars[] = $row;
 }
 

@@ -50,12 +50,16 @@ $session_stmt->bind_result($user_id);
 $session_stmt->fetch();
 $session_stmt->close();
 
-$check_stmt = $conn->prepare("SELECT 1 FROM user_avatars WHERE user_id = ? AND avatar_id = ? LIMIT 1");
-$check_stmt->bind_param("ii", $user_id, $avatar_id);
-$check_stmt->execute();
-$check_stmt->store_result();
+$own_stmt = $conn->prepare("SELECT owned_avatars FROM users WHERE id = ?");
+$own_stmt->bind_param("i", $user_id);
+$own_stmt->execute();
+$own_stmt->bind_result($owned_json);
+$own_stmt->fetch();
+$own_stmt->close();
 
-if ($check_stmt->num_rows === 0) {
+$owned_ids = array_map('intval', json_decode($owned_json ?: '[]', true) ?: []);
+
+if (!in_array((int)$avatar_id, $owned_ids, true)) {
     http_response_code(403);
     echo json_encode([
         'status' => 403,
@@ -63,7 +67,6 @@ if ($check_stmt->num_rows === 0) {
     ]);
     exit;
 }
-$check_stmt->close();
 
 $update_stmt = $conn->prepare("UPDATE users SET avatar = ? WHERE id = ?");
 $update_stmt->bind_param("ii", $avatar_id, $user_id);
